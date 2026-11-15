@@ -1,0 +1,93 @@
+// RenewPro v5 — قواعد Firestore
+// ضعها في: Firebase Console ← Firestore Database ← Rules ثم «Publish».
+// أضف بريد كل مدير في لائحة admins() أسفله.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function admins()   { return ['tsptanger20@gmail.com']; }          // ← بريد المدير (أضف غيره بفاصلة)
+    // مفتاح الموظف = بريده بحروف صغيرة وكل رمز «_»
+    function ukey()     { return request.auth.token.email.lower().replace('[^a-z0-9]', '_'); }
+    function isAdmin()  {
+      return signedIn() && (request.auth.token.email in admins() ||
+        get(/databases/$(database)/documents/rp_meta/users).data.get(ukey(), {}).get('role', '') == 'admin');
+    }
+    // صلاحية «📥 تحميل الملفات» (من جدول الصلاحيات فالبرنامج)
+    function canFiles() {
+      return isAdmin() || (signedIn() &&
+        get(/databases/$(database)/documents/rp_meta/users).data.get(ukey(), {}).get('perms', {}).get('files', false) == true);
+    }
+    // صلاحية «🏦 البنك»: خاصها تتعطى صراحة فجدول الصلاحيات
+    function canBank() {
+      return isAdmin() || (signedIn() &&
+        get(/databases/$(database)/documents/rp_meta/users).data.get(ukey(), {}).get('perms', {}).get('bank', false) == true);
+    }
+
+    // لائحة التجديد: الكل يقرأ ويعدّل ويضيف، والحذف (ومنه تحميل لائحة جديدة) للمدير ولمن عندو «تحميل الملفات»
+    match /contacts/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if canFiles();
+    }
+
+    // الديون: لائحة الديون وخريطة الربط (x_...) يكتبها المدير ومن عندو «تحميل الملفات»؛ متابعة كل سطر يكتبها الجميع
+    match /debts/{id} {
+      allow read: if signedIn();
+      allow write: if canFiles() || (signedIn() && !id.matches('x_.*'));
+    }
+
+    // المهام المشتركة: الكل يقرأ ويضيف ويعدّل (إنجاز)، والحذف لصاحب المهمة أو المدير
+    match /tasks/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if isAdmin() || (signedIn() && resource.data.byEmail == request.auth.token.email);
+    }
+
+    // سجل الحوادث: كل من له حساب يقرأ ويضيف ويعدّل (الصلاحية تُضبط في البرنامج)، والحذف للمدير
+    match /sinistres/{id} {
+      allow read, create, update: if signedIn();
+      allow delete: if isAdmin();
+    }
+
+    // الحاسبة (v5): السجل، الصندوق، الزبناء، الأسعار… الكل يقرأ ويكتب، و«_meta» (حالة النقل) للمدير فقط
+    match /calc/{id} {
+      allow read: if signedIn();
+      allow write: if signedIn() && (id != '_meta' || isAdmin());
+    }
+
+    // 🗂️ الملفات المحمّلة: الكل يقرأ، والإضافة لمن عندو «تحميل الملفات»، والحذف للمدير فقط
+    match /files/{id} {
+      allow read: if signedIn();
+      allow create, update: if canFiles();
+      allow delete: if isAdmin();
+    }
+
+    // 🏦 البنك (v6.3): غير المدير ومن عندو «البنك» يقرا ويكتب، والحذف للمدير
+    match /bank/{id} {
+      allow read, create, update: if canBank();
+      allow delete: if isAdmin();
+    }
+
+    // 🐞 سجل الأخطاء (v7.0.4): أي واحد مسجّل يقدر يزيد خطأ ولا بلاغ، والمدير وحدو يقرا ويمسح
+    match /logs/{id} {
+      allow create: if signedIn();
+      allow read, delete: if isAdmin();
+    }
+
+    // 🛡️ الجلسات (v7.6): كل جهاز كيكتب السطر ديالو (بلا ما يمسّ «kick»)، والمدير كيقرا الكل وكيحط «kick» باش يسدّ جلسة
+    match /sessions/{id} {
+      allow read: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && !('kick' in request.resource.data);
+      allow update: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid
+        && request.resource.data.get('kick', null) == resource.data.get('kick', null));
+      allow delete: if isAdmin() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    // الإعدادات المشتركة، الموظفون، الأرشيف: المدير يكتب، الجميع يقرأ. دفتر الهواتف يكتبه الجميع.
+    // «تحميل الملفات»: أرشيف اللوائح (archh/archc)، قاعدة الأرقام (pbk)، واسم اللائحة فالإعدادات.
+    match /rp_meta/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin() || (signedIn() && id == 'phones')
+        || (canFiles() && (id == 'settings' || id.matches('archh_.*') || id.matches('archc_.*') || id.matches('pbk_.*')));
+    }
+  }
+}

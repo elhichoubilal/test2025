@@ -1,0 +1,24 @@
+const { chromium } = require('playwright');
+(async () => { const b = await chromium.launch(); const p = await (await b.newContext({viewport:{width:1300,height:950}})).newPage(); p.on('dialog', d=>d.accept()); const e=[];p.on('pageerror',x=>e.push(x.message));
+ await p.goto('file:///home/claude/work/_t/d7a.html'); await p.waitForTimeout(4500);
+ await p.evaluate(()=>{ localStorage.setItem('eurv102_ci', JSON.stringify({name:'AGENCE TEST SARL',phone:'05 39 00 00 00',addr:'Avenue exemple',city:'Ksar Sghir',ice:'001234567000089'})); const i=document.createElement('input'); i.type='file'; i.id='tin'; document.body.appendChild(i); i.onchange=()=>{ pdf7Handle(i.files[0]); i.value=''; }; });
+ await p.setInputFiles('#tin','a5.pdf'); await p.waitForTimeout(7000);
+ await p.fill('#q7-paid','835.76'); await p.dispatchEvent('#q7-paid','input'); await p.click('[data-act="q7-ok"]'); await p.waitForTimeout(2500);
+ console.log('q7 fac btn', await p.$('[data-act="q7-fac"]')!==null);
+ await p.click('[data-act="q7-fac"]'); await p.waitForTimeout(1200);
+ const f = await (await p.$('.fac8-frame')).contentFrame(); 
+ console.log('lines', await f.evaluate(()=>[...document.querySelectorAll('#t tbody tr')].map(r=>[...r.cells].slice(0,4).map(c=>c.innerText).join(' | '))));
+ console.log('net', await f.textContent('#net'), '|', await f.textContent('#lettres'), '| num', await f.textContent('#num'));
+ console.log('contrat', (await f.evaluate(()=>document.querySelectorAll('.bx')[1].innerText)).replace(/\n/g,' / '), '| pay', await f.textContent('.pay'));
+ await p.screenshot({path:'fac1.png'});
+ await f.evaluate(()=>{ window.print=function(){ window.__printed=true; }; }); await f.click('text=Imprimer / PDF'); await p.waitForTimeout(400);
+ console.log('after print num', await f.textContent('#num'), 'counter', await p.evaluate(()=>localStorage.getItem('eurv102_fac')), 'printed', await f.evaluate(()=>window.__printed), 'foot', await p.evaluate(()=>localStorage.getItem('rp7_fac_foot')));
+ await f.click('text=Fermer'); await p.waitForTimeout(300);
+ // history: other op without PDF lines
+ await p.evaluate(()=>{ App.go('c-hist'); }); await p.waitForTimeout(1200);
+ await p.evaluate(()=>{ const bs=document.querySelectorAll('[data-act="h7-fac"]'); bs[bs.length-1].click(); }); await p.waitForTimeout(1000);
+ const f2 = await (await p.$('.fac8-frame')).contentFrame();
+ console.log('hist lines', await f2.evaluate(()=>[...document.querySelectorAll('#t tbody tr')].map(r=>[...r.cells].slice(0,4).map(c=>c.innerText).join(' | '))), await f2.textContent('#num'));
+ await f2.click('text=Ligne'); await p.keyboard.type('Frais'); 
+ await p.setViewportSize({width:390,height:800}); await p.waitForTimeout(300); await p.screenshot({path:'fac2.png'});
+ console.log(e.join('|')||'noerr'); await b.close(); })();

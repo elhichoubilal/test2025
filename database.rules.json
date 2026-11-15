@@ -1,0 +1,10 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "eurdesktop": {
+      ".read": "auth != null && auth.token.firebase.sign_in_provider == 'password'",
+      ".write": "auth != null && auth.token.firebase.sign_in_provider == 'password'"
+    }
+  }
+}

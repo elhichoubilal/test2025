@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F6F8">
+<title>RenewPro 7 Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/v7.css">
+</head>
+<body>
+
+<!-- ═════════ الدخول ═════════ -->
+<div id="splash" class="splash"><div class="brand big">RenewPro <span>7</span></div></div>
+<div id="login" class="login hide">
+  <form class="lg-card" id="lg-form" autocomplete="on">
+    <div class="lg-logo">R</div>
+    <div class="brand big">RenewPro <span>7</span></div>
+    <div class="lg-sub" id="lg-sub">تسجيل الدخول</div>
+    <input id="lg-email" class="inp" type="email" dir="ltr" autocomplete="username" placeholder="البريد الإلكتروني" required>
+    <input id="lg-pass" class="inp" type="password" dir="ltr" autocomplete="current-password" placeholder="كلمة السر" required>
+    <button class="btn pri wide" id="lg-btn" type="submit">دخول</button>
+    <div class="lg-err" id="lg-err"></div>
+  </form>
+</div>
+
+<!-- ═════════ التطبيق ═════════ -->
+<div id="app" class="app hide">
+  <header class="top">
+    <div class="brand"><i>R</i>RenewPro <span>7</span></div>
+    <button class="top-search" id="top-search" data-act="search-open" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg><span>بحث</span><kbd>Ctrl K</kbd></button>
+    <div class="top-list" id="top-list"></div>
+    <div class="top-acts" id="top-acts"></div>
+    <button class="top-b opt lang-b" id="lang-b" data-act="lang-toggle" aria-label="language">FR</button>
+    <button class="top-b opt" id="theme-b" data-act="theme-toggle" aria-label="theme">🌙</button>
+    <button class="top-b hide" id="install-b" data-act="pwa-install" aria-label="install">📲</button>
+    <div class="sync" id="sync" title=""></div>
+    <button class="uchip" id="uchip" data-act="nav" data-id="control"></button>
+  </header>
+  <nav class="nav" id="nav"></nav>
+  <main class="view" id="view"></main>
+  <button class="fab" id="fab7" data-act="fab7" type="button"><b>+</b><span>عملية جديدة</span></button>
+  <aside class="sheet" id="sheet"><div class="sheet-body" id="sheet-body"></div></aside>
+</div>
+
+<div class="session" id="session"></div>
+<div class="modal" id="modal"><div class="modal-box" id="modal-box"></div></div>
+<div class="toast" id="toast"></div>
+<input type="file" id="file-in" accept=".xlsx,.xls,.csv" hidden>
+
+<!-- Firebase (الحساب نفسه وقاعدة البيانات نفسها) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="js/vendor/xlsx.full.min.js"></script>
+
+<!-- الأساس -->
+<script src="js/core.js"></script>
+<script src="js/data.js"></script>
+<!-- الأقسام: لإضافة قسم جديد أضف سطراً هنا فقط -->
+<script src="js/mod-renew.js"></script>
+<script src="js/mod-debts.js"></script>
+<script src="js/mod-prod.js"></script>
+<script src="js/mod-tasks.js"></script>
+<script src="js/calc-store.js"></script>
+<script src="js/mod-calc.js"></script>
+<script src="js/mod-archive.js"></script>
+<script src="js/mod-files.js"></script>
+<script src="js/mod-dash.js"></script>
+<script src="js/mod-settings.js"></script>
+<script src="js/dropzone.js"></script>
+<script src="js/mod-phones.js"></script>
+<script src="js/mod-perms.js"></script>
+<script src="js/mod-sin.js"></script>
+<script src="js/sin-experts-data.js"></script>
+<script src="js/mod-sin-mail.js"></script>
+<script src="js/sin-cat-req.js"></script>
+<script src="js/sin-forfait.js"></script>
+<script src="js/mod-bank.js"></script>
+<script src="js/mod-sheets.js"></script>
+<script src="js/mod-control.js"></script>
+<!-- RenewPro 7: الشكل الجديد -->
+<script src="js/v8-engine.js"></script>
+<script src="js/v8-store.js"></script>
+<script src="js/v8-ops.js"></script>
+<script src="js/v7-shell.js"></script>
+<script src="js/v7-home.js"></script>
+<script src="js/v7-pdf.js"></script>
+<script src="js/v7-layout.js"></script>
+<script src="js/v7-xl.js"></script>
+<script src="js/v7-logs.js"></script>
+<script src="js/v7-sin.js"></script>
+<script src="js/v7-calc-engine.js"></script>
+<script src="js/v7-calc-hist.js"></script>
+<script src="js/v7-calc-new.js"></script>
+<script src="js/v7-lock.js"></script>
+<script src="js/v7-dash.js"></script>
+<script src="js/v7-sec.js"></script>
+<script src="js/v7-ctl.js"></script>
+<script src="js/v7-pdf-quick.js"></script>
+<script src="js/v7-sin-quick.js"></script>
+<script src="js/v8-cash.js"></script>
+<script src="js/v8-renew.js"></script>
+<script src="js/v8-prices.js"></script>
+<script src="js/v8-print.js"></script>
+<script src="js/v7-wa.js"></script>
+<script src="js/v8-bord.js"></script>
+<script src="js/v8-facture.js"></script>
+<!-- الإقلاع -->
+<script src="js/boot.js"></script>
+</body>
+</html>

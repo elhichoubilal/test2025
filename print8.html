@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RenewPro — Reçu</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- RenewPro 7.15 · print8.html: الوصل والـ Pièce de recette (منقولين حرفياً من الحاسبة القديمة: نفس الشكل، نفس CSS، نفس الدوال).
+     كيتحل فنافذة فوق البرنامج ملي كتطبع، بلا الحاسبة القديمة. -->
+<style>
+:root {
+--bg: #f0f2f7;
+--bg2: #ffffff;
+--bg3: #f8f9fc;
+--panel: #ffffff;
+--border: rgba(0,0,0,.09);
+--border2: rgba(0,0,0,.15);
+
+--gold: #1e3a5f;
+--gold-b: #2c5282;
+--gold-d: #0f2440;
+--gold-glow: rgba(30,58,95,.18);
+--gold-bg: rgba(30,58,95,.08);
+
+--green: #0a8a5f;
+--green-bg: rgba(10,138,95,.08);
+--red: #dc2626;
+--red-bg: rgba(220,38,38,.08);
+--blue: #2563eb;
+--blue-bg: rgba(37,99,235,.08);
+--amber: #d97706;
+--amber-bg: rgba(217,119,6,.08);
+--purple: #7c3aed;
+--purple-bg: rgba(124,58,237,.08);
+
+--text: #1a1f2e;
+--text2: #4a5568;
+--text3: #8a95aa;
+
+--r: 10px;
+--r2: 14px;
+--r3: 7px;
+
+--sidebar-w: 240px;
+--header-h: 56px;
+
+--shadow: 0 1px 4px rgba(0,0,0,.08), 0 2px 8px rgba(0,0,0,.04);
+--shadow2: 0 4px 24px rgba(0,0,0,.12);
+--glow: 0 0 0 1px var(--gold-d), 0 4px 16px var(--gold-glow);
+}
+[data-ar],[data-fr]{display:none}
+body:not(.fr) [data-ar]{display:revert}
+body.fr [data-fr]{display:revert}
+/* ══════════════════════════════════════════════════════════
+   RECEIPT / PRINT
+══════════════════════════════════════════════════════════ */
+.receipt{display:none;position:fixed;inset:0;background:#fff;color:#000;z-index:999;overflow-y:auto;padding:20px;font-family:'Tajawal',sans-serif}
+.receipt.show{display:block}
+.rcclose{position:fixed;top:12px;right:12px;background:var(--red);color:#fff;border:none;border-radius:9px;padding:6px 13px;cursor:pointer;font-weight:700;z-index:1000;font-size:.74rem}
+.print-size-row{display:flex;gap:8px;margin-bottom:16px;justify-content:center;flex-wrap:wrap}
+.pszbtn{padding:6px 11px;border-radius:8px;font-family:inherit;font-weight:700;font-size:.72rem;cursor:pointer;border:1.5px solid;transition:.15s}
+.pszbtn.a5{background:#f0f4ff;border-color:#4c6ef5;color:#4c6ef5}
+.pszbtn.t80{background:#e6f7ee;border-color:#0d9e6e;color:#0d9e6e}
+.pszbtn.a4{background:#f8f9fa;border-color:#868e96;color:#868e96}
+.rcwrap{max-width:360px;margin:0 auto}
+.rcdiv{border-top:1px dashed #ddd;margin:10px 0}
+.rcr{display:flex;justify-content:space-between;font-size:.8rem;margin-bottom:5px}
+.rcr .l{color:#888;font-weight:600}.rcr .v{font-weight:700}
+.rctbox{background:#f8f9fa;border:1.5px solid #ddd;border-radius:10px;padding:14px;text-align:center;margin:12px 0}
+.rctl{font-size:.72rem;color:#666;margin-bottom:5px;font-weight:600}
+.rctv{font-size:1.5rem;font-weight:900}
+.rctv.pos{color:#0a8a5f}.rctv.neg2{color:#c92a2a}
+.rcsigns{display:flex;gap:16px;margin-top:20px}
+.rcsign{flex:1;text-align:center}
+.rcsline{border-top:1.5px solid #333;padding-top:5px;font-size:.65rem;color:#888;margin-top:28px}
+.rc-footer{font-size:.66rem;color:#ccc;text-align:center;margin-top:10px;line-height:1.8}
+.share-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.share-btn{flex:1;min-width:80px;padding:7px 6px;border-radius:var(--r3);border:1.5px solid;font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;text-align:center;transition:.2s}
+.share-btn.wa{background:#e8f5e9;border-color:#43a047;color:#2e7d32}
+.share-btn.cp{background:#e8f1ff;border-color:rgba(37,99,235,.3);color:#1d4ed8}
+.share-btn.sms{background:#f3f0ff;border-color:rgba(95,61,196,.3);color:#5b21b6}
+
+/* PIECE DE RECETTE — OFFICIAL DUPLICATE RECEIPT */
+.receipt-piece{display:none;position:fixed;inset:0;background:#fff;color:#000;z-index:999;overflow-y:auto;padding:20px;font-family:Arial,'Tajawal',sans-serif;direction:ltr;text-align:left}
+.receipt-piece.show{display:block}
+.piece-wrap{max-width:680px;margin:0 auto;direction:ltr;text-align:left}
+.piece-copy{padding:10px 4px;font-size:.76rem;line-height:1.65;direction:ltr;text-align:left;font-family:Arial,sans-serif;color:#111}
+.piece-sep{border-top:1px dashed #999;margin:18px 0}
+.piece-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
+.piece-head-l{text-align:left}
+.piece-head-r{text-align:right;padding-top:2px}
+.piece-co{font-size:.82rem;font-weight:800}
+.piece-addr{font-size:.66rem;margin-top:4px;line-height:1.5}
+.piece-tel{font-size:.66rem;margin-top:2px}
+.piece-ville{font-size:.66rem;margin-top:2px;padding-left:16px}
+.piece-tt{font-size:.78rem;font-weight:800;text-decoration:underline}
+.piece-num{font-size:.76rem;font-weight:800;margin-top:4px;text-align:left;padding-left:4px;}
+.piece-frow{display:flex;gap:14px;margin-bottom:9px}
+.pf-cell{flex:1 1 0;min-width:0}
+.pf-cell.wide{flex:1.9 1 0}
+.pf-label{font-weight:700}
+.pf-val{font-weight:400}
+.piece-foot{margin-top:16px;font-size:.76rem;padding-left:16px}
+
+
+@media print{
+body>*{display:none!important}
+.receipt.show,.receipt-piece.show{display:block!important;position:static!important;padding:0!important}
+.rcclose,.print-size-row,.share-row{display:none!important}
+}
+@page{size:A5 portrait;margin:8mm}
+html,body{margin:0;background:#fff}
+body{font-family:'Tajawal',sans-serif}
+
+</style></head><body>
+<div class="receipt" id="receipt">
+<button class="rcclose" onclick="p8Close()">✕ <span data-ar>إغلاق</span><span data-fr>Fermer</span></button>
+<div class="print-size-row">
+<button class="pszbtn a5" onclick="doPrint('a5')">📄 A5</button>
+<button class="pszbtn t80" onclick="doPrint('80mm')">🖨️ 80mm</button>
+<button class="pszbtn a4" onclick="doPrint('a4')">📃 A4</button>
+</div>
+<div class="share-row">
+<button class="share-btn wa" onclick="shareWA()">📱 WhatsApp</button>
+<button class="share-btn cp" onclick="copyRec()">📋 <span data-ar>نسخ</span><span data-fr>Copier</span></button>
+<button class="share-btn sms" onclick="shareNative()">🔗 Share</button>
+<button class="share-btn cp" onclick="downloadReceiptPDF()">⬇️ PDF</button>
+</div>
+<div class="rcwrap">
+<div style="text-align:center;margin-bottom:14px">
+<div style="font-size:1.1rem;font-weight:900;color:#212529">🛡️ <span id="r-ci-name">EUR assurance</span></div>
+<div style="font-size:.7rem;color:#888;font-family:'JetBrains Mono',monospace;margin-top:2px" id="r-num"></div>
+<div style="font-size:.78rem;font-weight:700;margin-top:2px;color:#555"><span data-ar>وصل إرجاع</span><span data-fr>Reçu de remboursement</span></div>
+</div>
+<div class="rcdiv"></div>
+<div class="rcr"><span class="l"><span data-ar>التاريخ</span><span data-fr>Date</span>:</span><span class="v" id="r-date"></span></div>
+<div class="rcr"><span class="l">Agent:</span><span class="v" id="r-user"></span></div>
+<div class="rcr"><span class="l"><span data-ar>الزبون</span><span data-fr>Client</span>:</span><span class="v" id="r-client"></span></div>
+<div class="rcr" id="r-pr" style="display:none"><span class="l">Immat.:</span><span class="v" id="r-plate" style="font-family:monospace"></span></div>
+<div class="rcr" id="r-polr" style="display:none"><span class="l">N° Police:</span><span class="v" id="r-police" style="font-family:monospace"></span></div>
+<div class="rcr"><span class="l"><span data-ar>التأمين</span><span data-fr>Assurance</span>:</span><span class="v" id="r-ins"></span></div>
+<div class="rcr" id="r-dr" style="display:none"><span class="l"><span data-ar>الفترة</span><span data-fr>Période</span>:</span><span class="v" id="r-dates"></span></div>
+<div class="rcdiv"></div>
+<div class="rcr"><span class="l"><span data-ar>المدفوع</span><span data-fr>Payé</span>:</span><span class="v" id="r-paid"></span></div>
+<div class="rcr"><span class="l"><span data-ar>الرسمي</span><span data-fr>Officiel</span>:</span><span class="v" id="r-off"></span></div>
+<div class="rcr"><span class="l"><span data-ar>طريقة الدفع</span><span data-fr>Mode</span>:</span><span class="v" id="r-paymode"></span></div>
+<div class="rcr" id="r-payref-row" style="display:none"><span class="l">Réf.:</span><span class="v" id="r-payref" style="font-family:monospace"></span></div>
+<div class="rcdiv"></div>
+<div class="rctbox"><div class="rctl" id="r-tl"></div><div class="rctv" id="r-tv"></div></div>
+<div class="rcsigns">
+<div class="rcsign"><div class="rcsline"><span data-ar>توقيع الوسيط</span><span data-fr>Signature agent</span></div></div>
+<div class="rcsign"><div class="rcsline"><span data-ar>توقيع الزبون</span><span data-fr>Signature client</span><br><span id="r-csign" style="font-size:.62rem;color:#aaa"></span></div></div>
+</div>
+<div class="rcdiv"></div>
+<div class="rc-footer" id="r-footer">EUR assurance</div>
+</div>
+</div>
+
+<!-- PIECE DE RECETTE (OFFICIAL DUPLICATE RECEIPT) -->
+<div class="receipt-piece" id="receipt-piece">
+<button class="rcclose" onclick="p8Close()">✕ <span data-ar>إغلاق</span><span data-fr>Fermer</span></button>
+<div class="print-size-row">
+<button class="pszbtn a5" onclick="doPrintPiece('a5')">📄 A5</button>
+<button class="pszbtn t80" onclick="doPrintPiece('80mm')">🖨️ 80mm</button>
+<button class="pszbtn a4" onclick="doPrintPiece('a4')">📃 A4</button>
+<button class="pszbtn" style="background:var(--blue-bg);border-color:rgba(37,99,235,.35);color:var(--blue)" onclick="downloadPiecePDF()">⬇️ PDF</button>
+<button id="piece-usage-toggle-btn" class="pszbtn" onclick="togglePieceUsage()" title="إظهار Usage" style="font-size:.72rem">👁️ Usage</button>
+</div>
+<div class="piece-wrap" id="piece-wrap">
+<!-- two identical copies injected by JS: client copy + agency copy -->
+</div>
+</div>
+
+<script>
+'use strict';
+/* الحالة اللي كانت فالحاسبة (01-base.js) */
+var LANG='ar',CUR={n:'',av:'',isAdmin:false},LAST={paid:0,off:0,diff:0},LAST_PIECE_NUM=null;
+var P=window.parent&&window.parent!==window?window.parent:null;
+function svH(){ if(P&&P.Print8&&window.__curH) P.Print8.persistPiece(window.__curH); }      /* buildPieceReceiptFromHist كيحفظ رقم الـ Pièce فالسجل */
+function p8Close(){ document.querySelectorAll('.show').forEach(function(e){e.classList.remove('show');}); if(P&&P.Print8) P.Print8.hide(); }
+function p8Lang(l){ LANG=l==='fr'?'fr':'ar'; document.body.classList.toggle('fr',LANG==='fr'); document.documentElement.dir=LANG==='fr'?'ltr':'rtl'; }
+/* ───── منقول حرفياً ───── */
+function loadScriptOnce(src){
+return new Promise(function(resolve,reject){
+if(document.querySelector('script[data-lazy="'+src+'"]')){resolve();return;}
+var s=document.createElement('script');
+s.src=src;s.dataset.lazy=src;
+s.onload=function(){resolve();};
+s.onerror=function(){reject(new Error('تعذّر تحميل المكتبة — تحقق من الاتصال بالإنترنت'));};
+document.head.appendChild(s);
+});
+}
+function ensurePdfLib(){
+return typeof PDFLib!=='undefined'?Promise.resolve():loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js');
+}
+function ensureHtml2Canvas(){
+return typeof html2canvas!=='undefined'?Promise.resolve():loadScriptOnce('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+}
+function fmt(n){return Math.abs(n).toLocaleString('fr-MA',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function fmtD(v){if(!v)return'—';var p=v.split('-');return p[2]+'/'+p[1]+'/'+p[0];}
+function escHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function pieceStartVal(){
+var ci=JSON.parse(localStorage.getItem('eurv102_ci')||'{}');
+var v=parseInt(ci.piecestart);
+return isNaN(v)?59766:v;
+}
+function nextPieceNum(){
+var n=localStorage.getItem('eurv102_piece');
+var v=(n!=null?parseInt(n):pieceStartVal())+1;
+localStorage.setItem('eurv102_piece',v);
+return String(v).padStart(7,'0');
+}
+
+function fillReceipt(client,plate,police,ins,ds,de,paid,off,diff,payMode,payRef,num,date,user,av){
+var ci=JSON.parse(localStorage.getItem('eurv102_ci')||'{}');
+document.getElementById('r-ci-name').textContent=ci.name||'EUR assurance';
+document.getElementById('r-num').textContent='N° '+num;
+document.getElementById('r-date').textContent=date;
+document.getElementById('r-user').textContent=(av||'👤')+' '+user;
+document.getElementById('r-client').textContent=client||'—';
+document.getElementById('r-csign').textContent=client&&client!=='—'?client:'';
+document.getElementById('r-ins').textContent=ins||'—';
+document.getElementById('r-paid').textContent=fmt(paid)+' DH';
+document.getElementById('r-off').textContent=fmt(off)+' DH';
+document.getElementById('r-paymode').textContent=payMode==='cheque'?'📄 Chèque':payMode==='tpe'?'💳 TPE':'💵 '+(LANG==='fr'?'Espèces':'نقداً');
+var rrow=document.getElementById('r-payref-row');if(payRef){rrow.style.display='flex';document.getElementById('r-payref').textContent=payRef;}else rrow.style.display='none';
+var pr=document.getElementById('r-pr');if(plate){pr.style.display='flex';document.getElementById('r-plate').textContent=plate;}else pr.style.display='none';
+var polr=document.getElementById('r-polr');if(police){polr.style.display='flex';document.getElementById('r-police').textContent=police;}else polr.style.display='none';
+var dr=document.getElementById('r-dr');if(ds){dr.style.display='flex';document.getElementById('r-dates').textContent=fmtD(ds)+' → '+fmtD(de);}else dr.style.display='none';
+var tv=document.getElementById('r-tv');tv.textContent=fmt(Math.abs(diff))+' DH';
+if(diff>0){tv.className='rctv pos';document.getElementById('r-tl').textContent='↩️ '+(LANG==='fr'?'Montant remboursé':'المبلغ المُرجَع');}
+else if(diff<0){tv.className='rctv neg2';document.getElementById('r-tl').textContent='⚠️ '+(LANG==='fr'?'Solde restant dû':'المبلغ المديون');}
+else{tv.className='rctv';document.getElementById('r-tl').textContent='✅ '+(LANG==='fr'?'Compte soldé':'الحساب مطابق');tv.textContent='0.00 DH';}
+var ci2=JSON.parse(localStorage.getItem('eurv102_ci')||'{}');
+document.getElementById('r-footer').textContent=(ci2.name||'EUR assurance')+(ci2.phone?' · '+ci2.phone:'')+(ci2.addr?' · '+ci2.addr:'');
+}
+function buildRec(){
+if(!LAST.paid){alert(LANG==='fr'?"Calculez d'abord":'احسب أولاً');return false;}
+var num=document.getElementById('h-rec').textContent||curN();
+fillReceipt(document.getElementById('client').value,document.getElementById('plate').value,document.getElementById('police-num').value,getDesc(),document.getElementById('date-s').value,document.getElementById('date-e').value,LAST.paid,LAST.off,LAST.diff,PAY_MODE,getPayRef(),num,new Date().toLocaleDateString('fr-FR')+' '+new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}),CUR.n,CUR.av);
+return true;
+}
+function buildRecFromHist(h){fillReceipt(h.client,h.plate,h.police,h.ins,h.ds,h.de,h.paid,h.off,h.diff,h.payMode,h.payRef,h.num,h.date+(h.time?' '+h.time:''),h.user,h.av);document.getElementById('receipt').classList.add('show');}
+function doPrint(size){var s=document.getElementById('print-sty');if(!s){s=document.createElement('style');s.id='print-sty';document.head.appendChild(s);}s.textContent=size==='80mm'?'@page{size:80mm auto;margin:3mm;}':size==='a4'?'@page{size:A4 portrait;margin:10mm;}':'@page{size:A5 portrait;margin:8mm;}';document.querySelector('#receipt .print-size-row').style.display='none';setTimeout(function(){window.print();setTimeout(function(){document.querySelector('#receipt .print-size-row').style.display='flex';},500);},150);}
+
+/* ══════════════════════════════════════════════════════════
+PIÈCE DE RECETTE — reçu officiel dupliqué (client + agence)
+══════════════════════════════════════════════════════════ */
+function pf(label,value){return'<span class="pf-label">'+label+' :</span> <span class="pf-val">'+value+'</span>';}
+function pieceCopyHtml(ci,pieceNum,police,usage,attest,ds,de,client,off,paid,reliquat,city,dateHeure){
+var addrLine=ci.addr2?escHtml(ci.addr2)+(ci.ice?'  - ICE':''):'';
+var html='<div class="piece-copy">';
+/* ── Header: company block (left) + title/number block (right) ── */
+html+='<div class="piece-head">';
+html+='<div class="piece-head-l">';
+html+='<div class="piece-co">'+escHtml(ci.name||'EUR-ASSURANCES SARL')+'</div>';
+if(addrLine)html+='<div class="piece-addr">'+addrLine+'</div>';
+if(ci.ice)html+='<div class="piece-addr">'+escHtml(ci.ice)+'</div>';
+if(ci.phone)html+='<div class="piece-tel">Tél :  '+escHtml(ci.phone)+'</div>';
+if(city)html+='<div class="piece-ville">'+escHtml(city)+'</div>';
+html+='</div>';
+html+='<div class="piece-head-r">';
+html+='<div class="piece-tt">PIECE DE RECETTE</div>';
+html+='<div class="piece-num">'+pieceNum+'</div>';
+html+='</div>';
+html+='</div>';
+/* ── Fields grid ── */
+html+='<div class="piece-frow"><div class="pf-cell wide">'+pf('Police N°',escHtml(police||'-'))+'</div><div class="pf-cell piece-usage-cell" style="display:none">'+pf('Usage',escHtml(usage||''))+'</div><div class="pf-cell">'+(attest?pf('Attestation',escHtml(attest)):'')+'</div></div>';
+if(ds)html+='<div class="piece-frow"><div class="pf-cell wide">'+pf('Période de garantie du',fmtD(ds))+'</div><div class="pf-cell"></div><div class="pf-cell">'+pf('Au',fmtD(de))+'</div></div>';
+html+='<div class="piece-frow"><div class="pf-cell wide">'+pf('Assuré',escHtml(client||'-'))+'</div></div>';
+html+='<div class="piece-frow"><div class="pf-cell wide">'+pf('Prime Totale',fmt(off))+'</div></div>';
+html+='<div class="piece-frow"><div class="pf-cell wide">'+pf('Espèces',fmt(paid))+'</div><div class="pf-cell"></div><div class="pf-cell">'+pf('Reliquat',fmt(reliquat))+'</div></div>';
+html+='<div class="piece-foot">Fait à '+(city?escHtml(city)+', ':'')+'le '+dateHeure+'</div>';
+html+='</div>';
+return html;
+}
+function renderPieceReceipt(opts){
+LAST_PIECE_NUM=opts.pieceNum;
+var ci=JSON.parse(localStorage.getItem('eurv102_ci')||'{}');
+var city=ci.city||'';
+/* Espèces = المبلغ الفعلي المستلم، لكن مقفول عند حد Prime Totale (ما يطلع أكتر من السعر الرسمي حتى لو دفع أكتر).
+Reliquat = الباقي المستحق على الزبون فقط إذا دفع أقل من السعر الرسمي (وإلا 0). */
+var especes=Math.round(Math.min(opts.paid,opts.off)*100)/100;
+var reliquat=Math.max(0,Math.round((opts.off-opts.paid)*100)/100);
+var copy=pieceCopyHtml(ci,opts.pieceNum,opts.police,opts.usage,opts.attest,opts.ds,opts.de,opts.client,opts.off,especes,reliquat,city,opts.dateHeure);
+document.getElementById('piece-wrap').innerHTML=copy+'<div class="piece-sep"></div>'+copy;
+document.getElementById('receipt-piece').classList.add('show');
+}
+
+function togglePieceUsage(){
+  var cells=document.querySelectorAll('.piece-usage-cell');
+  if(!cells.length)return;
+  var btn=document.getElementById('piece-usage-toggle-btn');
+  var isHidden=(cells[0].style.display==='none'||cells[0].style.display==='');
+  // Actually check computed visibility
+  var showing=cells[0].offsetParent!==null&&cells[0].style.display!=='none';
+  if(showing){
+    cells.forEach(function(c){c.style.display='none';});
+    if(btn){btn.classList.remove('on');}
+  } else {
+    cells.forEach(function(c){c.style.display='';});
+    if(btn){btn.classList.add('on');}
+  }
+}
+function buildPieceReceipt(){
+if(!LAST.paid){alert(LANG==='fr'?"Calculez d'abord":'احسب أولاً');return;}
+var num=getPieceNum();
+if(num===null)return;
+var now=new Date();
+var dateHeure=now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+renderPieceReceipt({
+pieceNum:num,
+police:document.getElementById('police-num').value.trim(),
+attest:(document.getElementById('attest-num')||{value:''}).value.trim(),
+usage:USAGE,
+ds:document.getElementById('date-s').value,
+de:document.getElementById('date-e').value,
+client:document.getElementById('client').value.trim(),
+off:LAST.off,paid:LAST.paid,
+dateHeure:dateHeure
+});
+}
+function buildPieceReceiptFromHist(h){
+/* رقم ثابت لكل عملية: يُخصَّص مرة واحدة فقط ويُحفظ داخل السجل نفسه، ولا يتغير بعدها */
+if(!h.pieceNum){
+h.pieceNum=nextPieceNum();
+svH();
+}
+var dateHeure=h.date+(h.time?' à '+h.time:'');
+renderPieceReceipt({
+pieceNum:h.pieceNum,police:h.police,attest:h.attest,usage:h.usage||'Personnel',
+ds:h.ds,de:h.de,client:h.client,off:h.off,paid:h.paid,dateHeure:dateHeure
+});
+}
+
+/* ── وصل يدوي: إدخال مباشر لـ Prime Totale / Espèces بدون المرور بمحرك حساب التأمين ── */
+var PIECE_MANUAL=false;
+function togglePieceManual(){
+PIECE_MANUAL=!PIECE_MANUAL;
+var sw=document.getElementById('piece-manual-sw'),box=document.getElementById('piece-manual-box');
+if(sw)sw.classList.toggle('on',PIECE_MANUAL);
+if(box)box.classList.toggle('show',PIECE_MANUAL);
+}
+function buildPieceReceiptManual(){
+var off=parseFloat(document.getElementById('pm-off').value)||0;
+var paid=parseFloat(document.getElementById('pm-paid').value)||0;
+if(!off){alert(LANG==='fr'?'Entrez la Prime Totale':'أدخل السعر الرسمي (Prime Totale)');return;}
+var client=document.getElementById('client').value.trim();
+if(!client){alert(LANG==='fr'?'Entrez le nom du client':'أدخل اسم الزبون');document.getElementById('client').focus();return;}
+var num=getPieceNum();
+if(num===null)return;
+var now=new Date();
+var dateHeure=now.toLocaleDateString('fr-FR')+' à '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+renderPieceReceipt({
+pieceNum:num,
+police:document.getElementById('police-num').value.trim(),
+attest:(document.getElementById('attest-num')||{value:''}).value.trim(),
+usage:USAGE,
+ds:document.getElementById('date-s').value,
+de:document.getElementById('date-e').value,
+client:client,
+off:off,paid:paid,
+dateHeure:dateHeure
+});
+}
+function doPrintPiece(size){var s=document.getElementById('print-sty-piece');if(!s){s=document.createElement('style');s.id='print-sty-piece';document.head.appendChild(s);}s.textContent=size==='80mm'?'@page{size:80mm auto;margin:3mm;}':size==='a4'?'@page{size:A4 portrait;margin:10mm;}':'@page{size:A5 portrait;margin:8mm;}';document.querySelector('#receipt-piece .print-size-row').style.display='none';setTimeout(function(){window.print();setTimeout(function(){document.querySelector('#receipt-piece .print-size-row').style.display='flex';},500);},150);}
+
+// Downloads the official receipt (Pièce de recette) as a PDF — captures
+// the actual rendered HTML (via html2canvas) so styling/borders/Arabic
+// text come out identical to what's on screen, then wraps it in a PDF.
+function downloadPiecePDF(){
+var el=document.getElementById('piece-wrap');
+if(!el){alert('—');return;}
+var row=document.querySelector('#receipt-piece .print-size-row');
+Promise.all([ensureHtml2Canvas(),ensurePdfLib()]).then(function(){
+row.style.display='none';
+return html2canvas(el,{scale:2,backgroundColor:'#ffffff',useCORS:true}).then(function(canvas){
+row.style.display='flex';
+var imgData=canvas.toDataURL('image/png');
+var pxToPt=0.75; // 96dpi px -> pt
+var wPt=canvas.width*pxToPt/2,hPt=canvas.height*pxToPt/2; // /2 to undo scale:2
+return PDFLib.PDFDocument.create().then(function(pdfDoc){
+return pdfDoc.embedPng(imgData).then(function(png){
+var page=pdfDoc.addPage([wPt,hPt]);
+page.drawImage(png,{x:0,y:0,width:wPt,height:hPt});
+return pdfDoc.save();
+});
+});
+});
+}).then(function(bytes){
+var blob=new Blob([bytes],{type:'application/pdf'});
+var a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+var num=(LAST_PIECE_NUM||'piece').replace(/[^a-zA-Z0-9-]/g,'');
+a.download='piece-'+num+'.pdf';
+document.body.appendChild(a);a.click();document.body.removeChild(a);
+}).catch(function(e){row.style.display='flex';console.error(e);alert((LANG==='fr'?'Erreur PDF: ':'خطأ PDF: ')+e.message);});
+}
+
+
+function buildShareTxt(){
+var ci=JSON.parse(localStorage.getItem('eurv102_ci')||'{}');
+var num=document.getElementById('r-num').textContent,client=document.getElementById('r-client').textContent,ins=document.getElementById('r-ins').textContent,paid=document.getElementById('r-paid').textContent,off=document.getElementById('r-off').textContent,tv=document.getElementById('r-tv').textContent,tl=document.getElementById('r-tl').textContent;
+var dr=document.getElementById('r-dr');var dates=dr&&dr.style.display!=='none'?document.getElementById('r-dates').textContent:'';
+var sep='-------------------';
+var lines=[''+(ci.name||'EUR assurance')+'',sep+' '+num,'Date: '+new Date().toLocaleDateString('fr-FR'),'Client: '+client,'Assurance: '+ins];
+if(dates)lines.push('Période: '+dates);
+lines.push(sep,'Payé: '+paid,'Officiel: '+off,sep,tl+': '+tv+'');
+if(ci.phone)lines.push('Tél: '+ci.phone);
+return lines.join('\n');
+}
+function shareWA(){window.open('https://wa.me/?text='+encodeURIComponent(buildShareTxt()),'_blank');}
+function copyRec(){var txt=buildShareTxt();if(navigator.clipboard)navigator.clipboard.writeText(txt).then(function(){alert('✅ Copié!');});else{var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('✅ Copié!');}}
+function shareNative(){if(navigator.share)navigator.share({text:buildShareTxt()});else copyRec();}
+
+function textToImageData(text,opts){
+opts=opts||{};
+var fontSize=opts.size||44;
+var isAr=/[\u0600-\u06FF]/.test(text);
+var fontFamily=isAr?"'Tajawal',Arial,sans-serif":"'Inter',Arial,sans-serif";
+var measure=document.createElement('canvas').getContext('2d');
+measure.font=fontSize+'px '+fontFamily;
+var textWidth=Math.ceil(measure.measureText(text).width)+16;
+var canvas=document.createElement('canvas');
+canvas.width=textWidth;canvas.height=Math.ceil(fontSize*1.5);
+var ctx=canvas.getContext('2d');
+ctx.font=fontSize+'px '+fontFamily;
+ctx.fillStyle=opts.color||'#000';
+ctx.textBaseline='top';
+ctx.direction=isAr?'rtl':'ltr';
+ctx.textAlign=isAr?'right':'left';
+ctx.fillText(text,isAr?canvas.width-8:8,4);
+return {dataUrl:canvas.toDataURL('image/png'),width:canvas.width,height:canvas.height};
+}
+
+function dataURLToBytes(dataUrl){
+var base64=dataUrl.split(',')[1];
+var binary=atob(base64);
+var bytes=new Uint8Array(binary.length);
+for(var i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+return bytes;
+}
+
+// Draws `text` on a pdf-lib page at PDF coordinates (x,y = bottom-left
+// origin), rendered as a crisp raster image so Arabic joins correctly.
+function drawTextOnPdfPage(pdfDoc,page,text,x,y,fontSizePt){
+text=String(text||'').trim();
+if(!text)return Promise.resolve();
+var ready=(document.fonts&&document.fonts.ready)?document.fonts.ready:Promise.resolve();
+return ready.then(function(){
+var scaleFactor=4;
+var img=textToImageData(text,{size:fontSizePt*scaleFactor});
+var pngBytes=dataURLToBytes(img.dataUrl);
+return pdfDoc.embedPng(pngBytes).then(function(pngImage){
+var wPt=img.width/scaleFactor,hPt=img.height/scaleFactor;
+page.drawImage(pngImage,{x:x,y:y-hPt*0.72,width:wPt,height:hPt});
+});
+});
+}
+
+// Download the currently open receipt (وصل) as a real PDF file.
+function downloadReceiptPDF(){
+var txt=buildShareTxt();
+var lines=txt.split('\n');
+ensurePdfLib().then(function(){
+return PDFLib.PDFDocument.create().then(function(pdfDoc){
+var page=pdfDoc.addPage([280,60+lines.length*18]);
+var y=page.getHeight()-30;
+var chain=Promise.resolve();
+lines.forEach(function(line){
+var yy=y;
+chain=chain.then(function(){return drawTextOnPdfPage(pdfDoc,page,line,20,yy,10);});
+y-=18;
+});
+return chain.then(function(){return pdfDoc.save();});
+});
+}).then(function(bytes){
+var blob=new Blob([bytes],{type:'application/pdf'});
+var a=document.createElement('a');
+a.href=URL.createObjectURL(blob);
+var num=(document.getElementById('r-num').textContent||'recu').replace(/[^a-zA-Z0-9-]/g,'');
+a.download='recu-'+num+'.pdf';
+document.body.appendChild(a);a.click();document.body.removeChild(a);
+}).catch(function(e){console.error(e);alert((LANG==='fr'?'Erreur PDF: ':'خطأ PDF: ')+e.message);});
+}
+
+
+/* رقم الـ Pièce: أوتوماتيك، ولا يدوي (الإعداد القديم eurv102_piece_mode) */
+function getPieceNum(){var mode=localStorage.getItem('eurv102_piece_mode')||'auto';if(mode==='manual'){var v=prompt(LANG==='fr'?'N° de la pièce':'رقم الوصل');return v&&v.trim()?v.trim():null;}return nextPieceNum();}
+/* العداد ديال الـ Pièce كيتزامن عبر البرنامج */
+(function(){ var f=nextPieceNum; nextPieceNum=function(){ var r=f.apply(this,arguments); if(P&&P.Store8) P.Store8.pushCounter('eurv102_piece','piece'); return r; }; })();
+</script></body></html>

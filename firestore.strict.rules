@@ -1,0 +1,77 @@
+// RenewPro v4 — قواعد Firestore المشدّدة (اختيارية)
+// الفرق عن firestore.rules:
+//   1) لا يدخل إلا المدير ومن أضفتهم في «الموظفون» داخل البرنامج (حتى لو أنشأ غريب حساباً بنفسه).
+//   2) الموظف يقرأ زبناءه المسندين إليه فقط — في قاعدة البيانات نفسها لا في الواجهة فقط
+//      (إلا إذا فعّلت «الموظف يرى كل الزبناء»).
+// قبل نشرها: أضف كل موظف في لوحة التحكم ← الموظفون، بالبريد نفسه الذي يدخل به. من لم تُضفه لن يرى شيئاً.
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function admins()   { return ['tsptanger20@gmail.com']; }          // ← بريد المدير (أضف غيره بفاصلة)
+    function isAdmin()  { return signedIn() && request.auth.token.email in admins(); }
+    // مفتاح الموظف في مستند rp_meta/users = بريده بحروف صغيرة، وكل ما ليس حرفاً أو رقماً يصير «_»
+    function ukey()     { return request.auth.token.email.lower().replace('[^a-z0-9]', '_'); }
+    function users()    { return get(/databases/$(database)/documents/rp_meta/users).data; }
+    function isMember() { return isAdmin() || (signedIn() && ukey() in users()); }
+    function isMgr()    { return isAdmin() || (isMember() && users()[ukey()].role == 'admin'); }
+    function seeAll()   { return get(/databases/$(database)/documents/rp_meta/settings).data.get('agentsSeeAll', false) == true; }
+    function myName()   { return users()[ukey()].name; }
+    function canFiles() { return isMgr() || (isMember() && users()[ukey()].get('perms', {}).get('files', false) == true); }
+    function canBank()  { return isMgr() || (isMember() && users()[ukey()].get('perms', {}).get('bank', false) == true); }
+
+    match /contacts/{id} {
+      allow read:   if isMgr() || (isMember() && (seeAll() || resource.data.agent == myName()));
+      allow create: if isMember();
+      allow update: if isMgr() || (isMember() && (seeAll() || resource.data.agent == myName()));
+      allow delete: if canFiles();
+    }
+    match /debts/{id} {
+      allow read:  if isMember();
+      allow write: if canFiles() || (isMember() && !id.matches('x_.*'));
+    }
+    match /tasks/{id} {
+      allow read, create, update: if isMember();
+      allow delete: if isMgr() || (isMember() && resource.data.byEmail == request.auth.token.email);
+    }
+    match /sinistres/{id} {
+      allow read, create, update: if isMember();
+      allow delete: if isMgr();
+    }
+    match /calc/{id} {
+      allow read: if isMember();
+      allow write: if isMember() && (id != '_meta' || isMgr());
+    }
+    match /files/{id} {
+      allow read: if isMember();
+      allow create, update: if canFiles();
+      allow delete: if isMgr();
+    }
+    match /bank/{id} {
+      allow read, create, update: if canBank();
+      allow delete: if isMgr();
+    }
+
+    // 🐞 سجل الأخطاء (v7.0.4): أي واحد مسجّل يقدر يزيد خطأ ولا بلاغ، والمدير وحدو يقرا ويمسح
+    match /logs/{id} {
+      allow create: if signedIn();
+      allow read, delete: if isMgr();
+    }
+
+    // 🛡️ الجلسات (v7.6): كل جهاز كيكتب السطر ديالو (بلا ما يمسّ «kick»)، والمدير كيقرا الكل وكيحط «kick» باش يسدّ جلسة
+    match /sessions/{id} {
+      allow read: if isMgr() || (signedIn() && resource.data.uid == request.auth.uid);
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid && !('kick' in request.resource.data);
+      allow update: if isMgr() || (signedIn() && resource.data.uid == request.auth.uid && request.resource.data.uid == request.auth.uid
+        && request.resource.data.get('kick', null) == resource.data.get('kick', null));
+      allow delete: if isMgr() || (signedIn() && resource.data.uid == request.auth.uid);
+    }
+
+    match /rp_meta/{id} {
+      allow read:  if isMember() || (signedIn() && id == 'users');   // يلزم قراءة «users» لمعرفة الصلاحية
+      allow write: if isMgr() || (isMember() && id == 'phones')
+        || (canFiles() && (id == 'settings' || id.matches('archh_.*') || id.matches('archc_.*') || id.matches('pbk_.*')));
+    }
+  }
+}
