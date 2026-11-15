@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="EUR assurance — Desktop">
+<meta name="theme-color" content="#0f2440">
+<title>EUR assurance — Desktop</title>
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<!-- PDF/canvas engines are loaded on demand (see ensurePdfLib/ensurePdfJs/ensureHtml2Canvas in app JS) to keep initial page weight light -->
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="mobile-fix.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="firebase-sync.js"></script>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN ══════════════ -->
+<div id="login-screen">
+<div class="lcard">
+<div class="l-logo">
+<div class="l-logo-icon">🛡️</div>
+<div>
+<div class="l-brand">EUR assurance v102</div>
+<div class="l-ver">v102 — نسخة عمل (بدون مزامنة)</div>
+</div>
+</div>
+<div class="l-title" id="l-title">اختر اسمك للبدء</div>
+<div class="ugrid" id="ugrid"></div>
+<div class="adiv">
+<div id="adm-a1"><button class="abtn-main" id="adm-show">🔑 Admin</button></div>
+<div id="adm-a2" style="display:none">
+<div style="position:relative;display:flex;gap:6px;align-items:center"><input type="password" id="adm-pwd-login" class="ainp" placeholder="كلمة السر..." style="flex:1"><button type="button" style="margin-left:6px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer" onclick="var e=document.getElementById('adm-pwd-login');e.type=e.type==='password'?'text':'password';this.textContent=e.type==='text'?'👁️':'🔒'">👁️</button><button type="button" style="margin-left:4px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:.75rem" hidden>💾</button><button type="button" onclick="togglePwdVis('adm-pwd-login',this)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:.85rem" title="إظهار/إخفاء">👁️</button></div>
+<div class="arow">
+<button class="aback" id="adm-back">✕</button>
+<button class="aok" id="adm-ok">🔑 دخول</button>
+</div>
+<div class="aerr" id="adm-err">❌ كلمة السر غير صحيحة</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ══════════════ LOCK SCREEN ══════════════ -->
+<div id="lock-screen">
+<div class="lock-card">
+<div class="lock-ico" id="lock-ico">🔒</div>
+<div class="lock-name" id="lock-name">—</div>
+<div style="display:flex;gap:6px;align-items:center;margin-bottom:11px"><input type="password" id="lock-pwd" class="ainp" placeholder="كلمة السر للمتابعة..." style="flex:1;margin-bottom:0"><button type="button" onclick="togglePwdVis('lock-pwd',this)" style="padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:.85rem">👁️</button></div>
+<button class="aok" style="width:100%;padding:12px" onclick="unlockSession()">🔓 متابعة</button>
+<button class="aback" style="width:100%;padding:10px;margin-top:8px;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer" onclick="backToLogin()">↩️ تغيير المستخدم</button>
+</div>
+</div>
+
+<!-- ══════════════ APP SHELL ══════════════ -->
+<div id="app-shell">
+
+<!-- MAIN -->
+<div class="main-area">
+<!-- TOPBAR -->
+<header class="topbar">
+<div>
+<div class="tb-title" id="tb-title"><span data-ar>حساب جديد</span><span data-fr>Nouveau calcul</span></div>
+<div class="tb-sub" id="h-rec">EUR-2026-0000</div>
+</div>
+<div class="tb-slot" id="tb-slot"></div>
+<div class="tb-right">
+<button class="tb-install" id="tb-install">📲 <span data-ar>تثبيت التطبيق</span><span data-fr>Installer l'app</span></button>
+<div class="lsw">
+<button class="lsbtn on" id="ls-ar">AR</button>
+<button class="lsbtn" id="ls-fr">FR</button>
+</div>
+<button class="sb-user-av" id="sb-av" onclick="confirmLogout()" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--border2);background:var(--bg3);cursor:pointer;font-size:1rem;flex-shrink:0" title="تغيير المستخدم">👤</button>
+<span id="fb-status" title="جاري الاتصال..." style="font-size:.85rem;cursor:default;margin-inline-start:4px">⚪</span>
+</div>
+</header>
+
+<!-- HEADER NAV STRIP (replaces the old sidebar) -->
+<nav class="header-nav" id="header-nav">
+<button class="nbtn hnbtn" data-pg="dash">
+<span class="hic nic">🏠</span>
+<span class="hlbl nlbl"><span data-ar>لوحة التحكم</span><span data-fr>Accueil</span></span>
+</button>
+<button class="nbtn hnbtn on" data-pg="calc">
+<span class="hic nic">🧮</span>
+<span class="hlbl nlbl"><span data-ar>حساب جديد</span><span data-fr>Calcul</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="hist">
+<span class="hic nic">📋</span>
+<span class="hlbl nlbl"><span data-ar>السجل</span><span data-fr>Historique</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="stats">
+<span class="hic nic">📊</span>
+<span class="hlbl nlbl"><span data-ar>الإحصاء</span><span data-fr>Stats</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="clients">
+<span class="hic nic">👥</span>
+<span class="hlbl nlbl"><span data-ar>الزبائن</span><span data-fr>Clients</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="renewals">
+<span class="hic nic">📋</span>
+<span class="hlbl nlbl"><span data-ar>متابعة التجديدات</span><span data-fr>Renouvellements</span></span>
+</button>
+<div class="hn-sep"></div>
+<button class="nbtn hnbtn" data-pg="caisse">
+<span class="hic nic">🗄️</span>
+<span class="hlbl nlbl"><span data-ar>الصندوق</span><span data-fr>Caisse</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="archives">
+<span class="hic nic">🗂️</span>
+<span class="hlbl nlbl"><span data-ar>الأرشيف</span><span data-fr>Archives</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="journal">
+<span class="hic nic">📒</span>
+<span class="hlbl nlbl"><span data-ar>اليوميات</span><span data-fr>Journal</span></span>
+</button>
+<button class="nbtn hnbtn" data-pg="reports">
+<span class="hic nic">📈</span>
+<span class="hlbl nlbl"><span data-ar>التقارير</span><span data-fr>Rapports</span></span>
+</button>
+<div class="hn-sep admin-only"></div>
+<button class="nbtn hnbtn admin-only" data-pg="prices">
+<span class="hic nic">💰</span>
+<span class="hlbl nlbl"><span data-ar>الأسعار</span><span data-fr>Prix</span></span>
+</button>
+<button class="nbtn hnbtn admin-only" data-pg="pdftpl">
+<span class="hic nic">🧷</span>
+<span class="hlbl nlbl"><span data-ar>قوالب PDF</span><span data-fr>Modèles</span></span>
+</button>
+<button class="nbtn hnbtn admin-only" data-pg="sync">
+<span class="hic nic">🔄</span>
+<span class="hlbl nlbl"><span data-ar>المزامنة</span><span data-fr>Sync</span></span>
+</button>
+</nav>
+
+<!-- CONTENT -->
+<div class="content" id="app-cnt">
+
+<!-- DRAFT BANNER -->
+<div class="draft-banner" id="draft-banner" onclick="restoreDraft()">
+📝 <span data-ar>يوجد مسودة محفوظة — اضغط للاسترجاع</span>
+<span data-fr>Brouillon sauvegardé — Cliquez pour restaurer</span>
+</div>
+
+<!-- ═══════════ DASHBOARD PAGE ═══════════ -->
+<div id="pages-wrap">
+<div class="page" id="page-dash">
+<div class="kpi-grid">
+<div class="kpi-card k-gold">
+<div class="kpi-top"><span class="kpi-ic">🗄️</span></div>
+<div class="kpi-v" id="dk-balance">—</div>
+<div class="kpi-l"><span data-ar>رصيد الصندوق الحالي</span><span data-fr>Solde caisse actuel</span></div>
+</div>
+<div class="kpi-card k-blue">
+<div class="kpi-top"><span class="kpi-ic">👥</span></div>
+<div class="kpi-v" id="dk-clients">0</div>
+<div class="kpi-l"><span data-ar>عدد الزبائن اليوم</span><span data-fr>Clients aujourd'hui</span></div>
+</div>
+<div class="kpi-card k-green">
+<div class="kpi-top"><span class="kpi-ic">💰</span></div>
+<div class="kpi-v" id="dk-revenue">0</div>
+<div class="kpi-l"><span data-ar>الإيرادات اليوم</span><span data-fr>Revenus aujourd'hui</span></div>
+</div>
+<div class="kpi-card k-red">
+<div class="kpi-top"><span class="kpi-ic">↩️</span></div>
+<div class="kpi-v" id="dk-refunds">0</div>
+<div class="kpi-l"><span data-ar>المرجعات اليوم</span><span data-fr>Remboursements aujourd'hui</span></div>
+</div>
+</div>
+<div class="calc-main-row" style="grid-template-columns:1fr 1fr">
+<div class="crd">
+<div class="ch"><div class="chi go">⭐</div><div><div class="ch-t"><span data-ar>أفضل موظف اليوم</span><span data-fr>Meilleur agent du jour</span></div></div></div>
+<div class="cb" id="dk-top-agent"><div class="empty" style="padding:24px">—</div></div>
+</div>
+<div class="crd">
+<div class="ch"><div class="chi b">📋</div><div><div class="ch-t"><span data-ar>آخر العمليات</span><span data-fr>Dernières opérations</span></div></div></div>
+<div class="cb" id="dk-recent-ops" style="padding:8px 16px"><div class="empty" style="padding:24px">—</div></div>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ CALC PAGE ═══════════ -->
+<div class="page active" id="page-calc">
+
+<!-- STATS BAR -->
+<div class="statsbar">
+<div class="scard gc"><div class="sc-val a" id="m-off">—</div><div class="sc-lbl"><span data-ar>الرسمي</span><span data-fr>Officiel</span></div></div>
+<div class="scard gg"><div class="sc-val g" id="m-paid">—</div><div class="sc-lbl"><span data-ar>المدفوع</span><span data-fr>Payé</span></div></div>
+<div class="scard gb"><div class="sc-val" id="m-diff">—</div><div class="sc-lbl"><span data-ar>الفرق</span><span data-fr>Écart</span></div></div>
+<div class="scard gp"><div class="sc-val" id="qs-total" style="color:var(--purple)">0</div><div class="sc-lbl"><span data-ar>إجمالي</span><span data-fr>Total op.</span></div></div>
+<div class="scard gr"><div class="sc-val" id="qs-ref" style="color:var(--green)">0</div><div class="sc-lbl"><span data-ar>مُرجَع اليوم</span><span data-fr>Remboursé auj.</span></div></div>
+</div>
+
+<!-- THREE COLUMNS IN ONE ROW -->
+<div class="calc-main-row">
+
+<!-- COL 1: ASSURANCE DATA -->
+<div>
+<div class="crd">
+<div class="ch"><div class="chi go">🛡️</div><div><div class="ch-t"><span data-ar>بيانات التأمين</span><span data-fr>Données assurance</span></div></div></div>
+<div class="cb">
+<div class="fld">
+<label><span data-ar>نوع التعرفة</span><span data-fr>Tarif</span></label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="tarif-wafa" onclick="setTarif('wafa')">Wafa</button>
+<button type="button" class="tbtn" id="tarif-tpv" onclick="setTarif('tpv')">TPV</button>
+<button type="button" class="tbtn" id="tarif-autre" onclick="setTarif('autre')">Autre</button>
+</div>
+<input type="hidden" id="tarif" value="wafa">
+</div>
+
+<!-- ══ WAFA — نوع المركبة العادي (كما هو) ══ -->
+<div id="wafa-fields">
+<div class="fld">
+<label><span data-ar>نوع المركبة</span><span data-fr>Type véhicule</span></label>
+<div class="tbg grid4">
+<button type="button" class="tbtn type on" id="tp-voiture" onclick="setType('voiture')">🚗<span class="tl"><span data-ar>سيارة</span><span data-fr>Voiture</span></span></button>
+<button type="button" class="tbtn type" id="tp-moto" onclick="setType('moto')">🏍️<span class="tl"><span data-ar>دراجة</span><span data-fr>Moto</span></span></button>
+<button type="button" class="tbtn type" id="tp-commercial" onclick="setType('commercial')">🚐<span class="tl"><span data-ar>تجاري</span><span data-fr>Comm.</span></span></button>
+<button type="button" class="tbtn type" id="tp-camion" onclick="setType('camion')">🚛<span class="tl"><span data-ar>شاحنة</span><span data-fr>Camion</span></span></button>
+</div>
+<input type="hidden" id="ins-type" value="voiture">
+</div>
+
+<div id="f-voiture">
+<div class="fld">
+<label><span data-ar>الوقود</span><span data-fr>Carburant</span></label>
+<div class="tbg grid2">
+<button type="button" class="tbtn" id="fu-e" onclick="setFuel('e')">⛽ <span data-ar>بنزين</span><span data-fr>Essence</span></button>
+<button type="button" class="tbtn on" id="fu-d" onclick="setFuel('d')">🛢️ <span data-ar>ديزل</span><span data-fr>Diesel</span></button>
+</div>
+<input type="hidden" id="fuel" value="d">
+</div>
+<div class="fld">
+<label>Puissance fiscale (CV)</label>
+<div class="tbg cvgrid" id="cv-grid"></div>
+<input type="hidden" id="cv" value="6">
+</div>
+</div>
+
+<div id="f-moto" style="display:none">
+<div class="fld">
+<label>Cylindrée</label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="mc-le50" onclick="setMotoCat('le50')">≤50 CC</button>
+<button type="button" class="tbtn" id="mc-mid" onclick="setMotoCat('mid')">51—125 CC</button>
+<button type="button" class="tbtn" id="mc-ge126" onclick="setMotoCat('ge126')">126+ CC</button>
+</div>
+<input type="hidden" id="moto-cat" value="le50">
+</div>
+</div>
+
+<div id="f-commercial" style="display:none">
+<div class="fld">
+<label>CV Commercial</label>
+<div class="tbg cvgrid" id="comm-cv-grid"></div>
+<input type="hidden" id="comm-cv" value="6">
+</div>
+</div>
+
+<div id="f-camion" style="display:none">
+<div class="fld">
+<label>Tonnage</label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="ct-t35" onclick="setCamTon('t35')">−3.5 T</button>
+<button type="button" class="tbtn" id="ct-t12" onclick="setCamTon('t12')">12 T</button>
+<button type="button" class="tbtn" id="ct-t14" onclick="setCamTon('t14')">14 T</button>
+</div>
+<input type="hidden" id="cam-ton" value="t35">
+</div>
+</div>
+
+<div class="fld">
+<label><span data-ar>مدة التأمين</span><span data-fr>Durée</span></label>
+<div class="tbg grid4">
+<button type="button" class="tbtn" id="dur-1" onclick="setDur(1)">1 <span data-ar>شهر</span><span data-fr>mois</span></button>
+<button type="button" class="tbtn" id="dur-3" onclick="setDur(3)">3 <span data-ar>أشهر</span><span data-fr>mois</span></button>
+<button type="button" class="tbtn on" id="dur-6" onclick="setDur(6)">6 <span data-ar>أشهر</span><span data-fr>mois</span></button>
+<button type="button" class="tbtn" id="dur-12" onclick="setDur(12)">1 <span data-ar>سنة</span><span data-fr>an</span></button>
+</div>
+<input type="hidden" id="dur" value="6">
+</div>
+
+<div id="install-tog-wrap" style="display:none;margin-top:6px">
+<button type="button" id="install-tog-btn" onclick="toggleInstallView()" style="width:100%;padding:9px;background:var(--blue-bg);border:1.5px dashed rgba(37,99,235,.3);border-radius:var(--r3);color:var(--blue);font-family:inherit;font-weight:700;font-size:.8rem;cursor:pointer">
+📅 <span data-ar>الزبون يريد التقسيط؟</span><span data-fr>Le client veut échelonner ?</span>
+</button>
+</div>
+
+<div id="install-box" style="display:none;margin-top:9px;background:var(--blue-bg);border:1px solid rgba(37,99,235,.18);border-radius:var(--r3);padding:10px 12px">
+<div style="font-size:.68rem;font-weight:800;color:var(--blue);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px">📅 <span data-ar>جدول التقسيط</span><span data-fr>Échéancier</span></div>
+<div id="install-rows" style="font-size:.78rem"></div>
+<div style="font-size:.66rem;color:var(--text3);margin-top:6px;padding-top:6px;border-top:1px dashed rgba(37,99,235,.2)">
+<span data-ar>يشمل رسم تقسيط</span><span data-fr>Inclut frais d'échelonnement</span>: <span id="install-fee-total">—</span> DH — <span data-ar>المجموع</span><span data-fr>Total</span>: <b id="install-total">—</b> DH
+</div>
+</div>
+</div>
+<!-- /wafa-fields -->
+
+<!-- ══ TPV — Camion / Camion avec remorque / Tourisme / Taxi ══ -->
+<div id="tpv-fields" style="display:none">
+<div class="fld">
+<label><span data-ar>نوع TPV</span><span data-fr>Type TPV</span></label>
+<div class="tbg grid4">
+<button type="button" class="tbtn type on" id="tpvt-camion" onclick="setTpvType('camion')">🚛<span class="tl">Camion</span></button>
+<button type="button" class="tbtn type" id="tpvt-remorque" onclick="setTpvType('remorque')">🚚<span class="tl">+Remorque</span></button>
+<button type="button" class="tbtn type" id="tpvt-tourisme" onclick="setTpvType('tourisme')">🚗<span class="tl">Tourisme</span></button>
+<button type="button" class="tbtn type" id="tpvt-taxi" onclick="setTpvType('taxi')">🚕<span class="tl">Taxi</span></button>
+</div>
+<input type="hidden" id="tpv-type" value="camion">
+</div>
+
+<div id="tpv-dur-wrap" class="fld">
+<label><span data-ar>المدة</span><span data-fr>Durée</span></label>
+<div class="tbg grid4" id="tpv-dur-grid"></div>
+<input type="hidden" id="tpv-dur" value="5j">
+</div>
+
+<div id="taxi-fields" style="display:none">
+
+<div class="fld">
+<label><span data-ar>طريقة الحساب</span><span data-fr>Méthode de calcul</span></label>
+<div class="tbg grid2">
+<button type="button" class="tbtn on" id="taxim-1" onclick="setTaxiMethod(1)"><span data-ar>يدوي كامل</span><span data-fr>Manuel (HT+Tax)</span></button>
+<button type="button" class="tbtn" id="taxim-2" onclick="setTaxiMethod(2)"><span data-ar>مبسّط (HT فقط)</span><span data-fr>Simplifié (HT seul)</span></button>
+</div>
+<input type="hidden" id="taxi-method" value="1">
+</div>
+
+<div class="fld">
+<label><span data-ar>مدة التأمين (Taxi)</span><span data-fr>Durée (Taxi)</span></label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="taxid-3m" onclick="setTaxiDur('3m')">3 <span data-ar>أشهر</span><span data-fr>mois</span></button>
+<button type="button" class="tbtn" id="taxid-6m" onclick="setTaxiDur('6m')">6 <span data-ar>أشهر</span><span data-fr>mois</span></button>
+<button type="button" class="tbtn" id="taxid-1a" onclick="setTaxiDur('1a')">1 <span data-ar>سنة</span><span data-fr>an</span></button>
+</div>
+<input type="hidden" id="taxi-dur" value="3m">
+</div>
+
+<div id="taxi-method1">
+<div class="r2">
+<div class="fld"><label>Prime HT <span data-ar>(شهري DH)</span><span data-fr>(mensuel DH)</span></label><input type="number" id="taxi-ht" step="0.01" inputmode="decimal" placeholder="0.00" oninput="fillP()"></div>
+<div class="fld"><label>Tax <span data-ar>(شهري DH)</span><span data-fr>(mensuel DH)</span></label><input type="number" id="taxi-tax" step="0.01" inputmode="decimal" placeholder="0.00" oninput="fillP()"></div>
+</div>
+<div style="font-size:.68rem;color:var(--text3);margin:-4px 0 8px">
+<span data-ar>يُضرب Prime HT و Tax تلقائياً في: 3 أشهر ×3 — 6 أشهر ×6 — سنة ×10 (قاعدة خاصة)</span>
+<span data-fr>Prime HT et Tax sont multipliés auto: 3mois ×3 — 6mois ×6 — 1an ×10 (règle spéciale)</span>
+</div>
+</div>
+
+<div id="taxi-method2" style="display:none">
+<div class="fld"><label>Prime HT <span data-ar>(شهري DH)</span><span data-fr>(mensuel DH)</span></label><input type="number" id="taxi-ht2" step="0.01" inputmode="decimal" placeholder="0.00" oninput="fillP()"></div>
+<div style="font-size:.68rem;color:var(--text3);margin:-4px 0 8px">
+<span data-ar>يُضرب تلقائياً في معامل المدة، ثم تُضاف Tax (%) و Taxe Parafiscale (%) تلقائياً — كلاهما قابل للتعديل من الإعدادات</span>
+<span data-fr>Multiplié auto selon la durée, puis Tax (%) et Taxe Parafiscale (%) ajoutées automatiquement — réglables</span>
+</div>
+</div>
+
+<div style="font-size:.68rem;color:var(--text3);margin:-4px 0 8px">
++ CNPAC (<span id="taxi-cnpac-disp">0.00</span> DH) — <span data-ar>يُضاف تلقائياً للمجموع</span><span data-fr>ajouté automatiquement au total</span>
+</div>
+</div>
+</div>
+<!-- /tpv-fields -->
+
+<!-- ══ AUTRE — فئات ومدد قابلة للتعديل بالكامل من الإعدادات ══ -->
+<div id="autre-fields" style="display:none">
+<div class="fld">
+<label><span data-ar>الفئة</span><span data-fr>Catégorie</span></label>
+<div class="tbg grid3" id="autre-cat-grid"></div>
+<input type="hidden" id="autre-cat" value="">
+</div>
+<div class="fld">
+<label><span data-ar>المدة</span><span data-fr>Durée</span></label>
+<div class="tbg grid3" id="autre-dur-grid"></div>
+<input type="hidden" id="autre-dur" value="">
+</div>
+<div id="autre-empty-msg" style="display:none;font-size:.76rem;color:var(--text3);text-align:center;padding:16px;background:var(--bg3);border-radius:var(--r3)">
+<span data-ar>لا توجد فئات بعد — أضِفها من صفحة "إعداد الأسعار"</span>
+<span data-fr>Aucune catégorie — ajoutez-en depuis "Configuration prix"</span>
+</div>
+</div>
+<!-- /autre-fields -->
+
+<div class="pbox">
+<span class="pb-l">💰 <span data-ar>السعر الرسمي</span><span data-fr>Prix officiel</span></span>
+<span class="pb-v" id="pv">—</span>
+</div>
+<div id="pbox-install" style="display:none;background:var(--blue-bg);border:1px solid rgba(37,99,235,.2);border-radius:var(--r3);padding:9px 14px;margin:-5px 0 9px;justify-content:space-between;align-items:center">
+<span style="font-size:.72rem;color:var(--blue);font-weight:700">📅 <span data-ar>القسط المحدد</span><span data-fr>Versement sélectionné</span></span>
+<span id="pv-install" style="font-family:'JetBrains Mono',monospace;font-size:1rem;font-weight:800;color:var(--blue)">—</span>
+</div>
+
+<div id="bm-wrap">
+<div style="font-size:.64rem;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.06em"><span data-ar>البونوس / ماليس</span><span data-fr>Bonus / Malus</span></div>
+<div class="tbg grid4" style="margin-bottom:6px">
+<button class="tbtn on" id="bm-none" onclick="setBM('none')" style="font-size:.72rem">➖ <span data-ar>بدون</span><span data-fr>Sans</span></button>
+<button class="tbtn" id="bm-bonus" onclick="setBM('bonus')" style="font-size:.72rem">✅ −10%</button>
+<button class="tbtn" id="bm-m20" onclick="setBM('m20')" style="font-size:.72rem">⚠️ +20%</button>
+<button class="tbtn" id="bm-m30" onclick="setBM('m30')" style="font-size:.72rem">🔴 +30%</button>
+</div>
+</div>
+
+<label class="mantog">
+<input type="checkbox" id="man-tog" onchange="togMan()">
+<span>✏️ <span data-ar>سعر يدوي</span><span data-fr>Prix manuel</span></span>
+</label>
+<div id="man-field" style="display:none;margin-top:8px">
+<div class="fld"><input type="number" id="man-price" placeholder="السعر الرسمي (DH)..." step="0.01" inputmode="decimal" oninput="updMan()"></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- COL 2: CLIENT & PAYMENT -->
+<div>
+<div class="crd">
+<div class="ch"><div class="chi b">👤</div><div><div class="ch-t"><span data-ar>الزبون والدفع</span><span data-fr>Client & Paiement</span></div></div></div>
+<div class="cb">
+<div class="fld">
+<div class="tbg grid2">
+<button type="button" class="tbtn on" id="cm-manual" onclick="setClientMode('manual')">✍️ <span data-ar>يدوي</span><span data-fr>Manuel</span></button>
+<button type="button" class="tbtn" id="cm-pdf" onclick="setClientMode('pdf')">📄 <span data-ar>استيراد من PDF</span><span data-fr>Importer PDF</span></button>
+</div>
+</div>
+<div id="client-pdf-import" style="display:none;margin:2px 0 10px;padding:10px;border:1.5px dashed var(--border2);border-radius:9px;background:var(--bg3)">
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+<button type="button" class="ul-addbtn" onclick="document.getElementById('client-pdf-file').click()">📎 <span data-ar>اختر شهادة/بوليصة PDF</span><span data-fr>Choisir un PDF</span></button>
+<input type="file" id="client-pdf-file" accept="application/pdf" style="display:none" onchange="onClientPdfSelected(this)">
+</div>
+<div id="client-pdf-status" style="font-size:.72rem;color:var(--text3);margin-top:6px"><span data-ar>يُستخرج تلقائياً ما هو متوفر: الاسم، رقم البوليصة، رقم الشهادة، التواريخ والسعر — وتبقى الحقول قابلة للتعديل بعد ذلك</span><span data-fr>Extraction automatique: nom, police, attestation, dates et prix — les champs restent modifiables ensuite</span></div>
+</div>
+<div class="r2">
+<div class="fld ac-wrap">
+<label><span data-ar>اسم الزبون</span><span data-fr>Nom client</span> <span style="color:var(--red);font-size:.7rem">*</span></label>
+<input type="text" id="client" placeholder="Nom..." autocomplete="off">
+<div class="autocomplete-list" id="ac-list"></div>
+</div>
+<div class="fld">
+<label><span data-ar>رقم اللوحة</span><span data-fr>Immatriculation</span></label>
+<input type="text" id="plate" placeholder="12345-A" style="font-family:'JetBrains Mono',monospace;text-align:center;text-transform:uppercase" oninput="this.value=this.value.toUpperCase()">
+</div>
+</div>
+
+<div class="loc-field">
+<span class="loc-ic">📍</span>
+<input type="text" id="location" placeholder="المكان / Lieu — اختياري">
+</div>
+
+<div class="r2">
+<div class="fld"><label>📅 <span data-ar>تاريخ البداية</span><span data-fr>Début</span></label><input type="date" id="date-s" onchange="calcEnd()"></div>
+<div class="fld"><label>📅 <span data-ar>تاريخ الانتهاء</span><span data-fr>Fin</span></label><input type="date" id="date-e" readonly style="background:var(--bg3);cursor:not-allowed;color:var(--text3)"></div>
+</div>
+
+<div class="r2">
+<div class="fld">
+<label><span data-ar>رقم البوليصة (اختياري)</span><span data-fr>N° Police (optionnel)</span></label>
+<input type="text" id="police-num" placeholder="POL-2026-..." style="font-family:'JetBrains Mono',monospace">
+</div>
+<div class="fld">
+<label><span data-ar>رقم الشهادة (اختياري)</span><span data-fr>N° Attestation</span></label>
+<input type="text" id="attest-num" placeholder="212 432 788" style="font-family:'JetBrains Mono',monospace">
+</div>
+</div>
+
+<div class="fld">
+<label><span data-ar>الاستعمال (Usage)</span><span data-fr>Usage</span></label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="us-perso" onclick="setUsage('Personnel')"><span data-ar>شخصي</span><span data-fr>Personnel</span></button>
+<button type="button" class="tbtn" id="us-taxi" onclick="setUsage('Taxi')">Taxi</button>
+<button type="button" class="tbtn" id="us-tc" onclick="setUsage('Transport Commercial')"><span data-ar>نقل</span><span data-fr>Transport</span></button>
+</div>
+<input type="hidden" id="usage-val" value="Personnel">
+</div>
+
+<div class="fld">
+<label><span data-ar>طريقة الدفع</span><span data-fr>Mode paiement</span></label>
+<div class="tbg grid3">
+<button type="button" class="tbtn on" id="pm-cash" onclick="setPayMode('cash')">💵<div style="font-size:.62rem;margin-top:2px;font-weight:700"><span data-ar>نقداً</span><span data-fr>Espèces</span></div></button>
+<button type="button" class="tbtn" id="pm-cheque" onclick="setPayMode('cheque')">📄<div style="font-size:.62rem;margin-top:2px;font-weight:700">Chèque</div></button>
+<button type="button" class="tbtn" id="pm-tpe" onclick="setPayMode('tpe')">💳<div style="font-size:.62rem;margin-top:2px;font-weight:700">TPE</div></button>
+</div>
+</div>
+<div class="fld" id="cheque-field" style="display:none">
+<label>📄 N° Chèque</label>
+<input type="text" id="cheque-num" placeholder="Ex: 123456..." style="font-family:'JetBrains Mono',monospace">
+</div>
+<div class="fld" id="tpe-field" style="display:none">
+<label>💳 Référence TPE</label>
+<input type="text" id="tpe-ref" placeholder="Ex: TXN-789..." style="font-family:'JetBrains Mono',monospace">
+</div>
+</div>
+</div>
+</div>
+
+<!-- COL 3: CALC ENGINE -->
+<div>
+<div class="crd">
+<div class="ch"><div class="chi r">⚡</div><div><div class="ch-t"><span data-ar>محرك الحساب</span><span data-fr>Moteur de calcul</span></div></div></div>
+<div class="cb">
+
+<div class="direct-tog" onclick="toggleDirect()">
+<span class="direct-tog-label">⚡ <span data-ar>دفع مباشر</span><span data-fr>Paiement direct</span></span>
+<div class="tog-sw" id="direct-sw"></div>
+</div>
+<div class="direct-box" id="direct-box">
+<div class="direct-badge">⚡ <span data-ar>وضع الدفع المباشر</span><span data-fr>Mode paiement direct</span></div>
+<div class="fld">
+<label><span data-ar>وصف العملية</span><span data-fr>Description</span></label>
+<input type="text" id="direct-desc" placeholder="تجديد — رسوم — تسوية...">
+</div>
+<div class="fld">
+<label><span data-ar>المبلغ (DH)</span><span data-fr>Montant (DH)</span></label>
+<input type="number" id="direct-amount" placeholder="500" step="0.01" inputmode="decimal" oninput="updDirect()">
+</div>
+<button class="valbtn" style="margin-top:8px" onclick="validerDirect()">✅ <span data-ar>تأكيد الدفع المباشر</span><span data-fr>Valider paiement direct</span></button>
+</div>
+
+<div id="paid-field-wrap">
+<div class="fld">
+<label><span data-ar>المبلغ المدفوع (DH)</span><span data-fr>Montant payé (DH)</span></label>
+<input type="number" id="paid" placeholder="700" step="0.01" inputmode="decimal" oninput="autoCalc()">
+</div>
+</div>
+
+<label class="mantog" style="margin:4px 0 0">
+<input type="checkbox" id="prev-tog" onchange="togPrev()">
+<span>🕐 <span data-ar>باقي سابق</span><span data-fr>Solde précédent</span></span>
+</label>
+<div id="prev-box" style="display:none;margin-top:7px">
+<div class="prev-bal-box">
+<div class="prev-bal-title">🕐 <span data-ar>الدفعة السابقة</span><span data-fr>Paiement précédent</span></div>
+<div class="r2">
+<div class="fld" style="margin-bottom:6px">
+<label style="font-size:.66rem"><span data-ar>الرسمي السابق</span><span data-fr>Officiel préc.</span></label>
+<input type="number" id="prev-off" placeholder="600" step="0.01" inputmode="decimal" oninput="calcPrev()">
+</div>
+<div class="fld" style="margin-bottom:6px">
+<label style="font-size:.66rem"><span data-ar>ما دُفع آنذاك</span><span data-fr>Payé préc.</span></label>
+<input type="number" id="prev-paid" placeholder="500" step="0.01" inputmode="decimal" oninput="calcPrev()">
+</div>
+</div>
+<div class="prev-bal-result">
+<span class="lbl"><span data-ar>الرصيد</span><span data-fr>Solde</span>:</span>
+<span class="val" id="prev-bal-val">—</span>
+</div>
+</div>
+</div>
+
+<div class="warn-box" id="warn-box">⚠️ <span id="warn-txt"></span></div>
+
+<div class="resbox" id="resbox">
+<div class="rt-l" id="rt-l">—</div>
+<div><span class="rt-v" id="rt-v">—</span><span style="font-size:.9rem;color:var(--text3)"> DH</span></div>
+</div>
+
+<button class="calcbtn" id="calc-btn">🔢 <span data-ar>احسب الفرق</span><span data-fr>Calculer l'écart</span></button>
+
+<div id="action-area" style="display:none;margin-top:9px">
+<button class="valbtn" id="val-btn">✅ <span data-ar>تأكيد — VALIDER</span><span data-fr>VALIDER</span></button>
+<button class="printbtn" id="print-btn">🖨️ <span data-ar>طباعة وصل</span><span data-fr>Imprimer reçu</span></button>
+<button class="printbtn" id="piece-btn" style="margin-top:7px;border-color:rgba(124,58,237,.35);color:var(--purple)">🧾 <span data-ar>طباعة وصل قبض رسمي</span><span data-fr>Pièce de recette</span></button>
+<div class="tbg grid2" style="margin-top:7px">
+<button type="button" class="tbtn on" id="pnm-auto" onclick="setPieceNumMode('auto')">🔢 <span data-ar>رقم الوصل تلقائي</span><span data-fr>N° auto</span></button>
+<button type="button" class="tbtn" id="pnm-manual" onclick="setPieceNumMode('manual')">✍️ <span data-ar>رقم الوصل يدوي</span><span data-fr>N° manuel</span></button>
+</div>
+<div id="piece-num-manual-box" style="display:none;margin-top:7px">
+<input type="text" id="piece-num-manual" placeholder="0000123" style="width:100%;padding:9px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:'JetBrains Mono',monospace;text-align:center;font-size:.9rem" oninput="localStorage.setItem('eurv102_piece_manual_last',this.value)">
+</div>
+</div>
+<div class="valok" id="valok">
+<div class="val-num" id="val-num"></div>
+<div class="val-info" id="val-info"></div>
+</div>
+
+<div class="direct-tog" style="margin-top:9px" onclick="togglePieceManual()">
+<span class="direct-tog-label">🧾 <span data-ar>وصل يدوي (بدون حساب)</span><span data-fr>Pièce manuelle (sans calcul)</span></span>
+<div class="tog-sw" id="piece-manual-sw"></div>
+</div>
+<div class="direct-box" id="piece-manual-box">
+<div class="direct-badge">🧾 <span data-ar>إدخال يدوي — Prime Totale و Espèces مباشرة</span><span data-fr>Saisie manuelle</span></div>
+<div class="r2">
+<div class="fld"><label>Prime Totale (DH)</label><input type="number" id="pm-off" placeholder="512" step="0.01" inputmode="decimal"></div>
+<div class="fld"><label>Espèces (DH)</label><input type="number" id="pm-paid" placeholder="500" step="0.01" inputmode="decimal"></div>
+</div>
+<div style="font-size:.68rem;color:var(--text3);margin:2px 0 8px"><span data-ar>يستخدم اسم الزبون ورقم البوليصة والاستعمال المُدخلة أعلاه في عمود الزبون</span><span data-fr>Utilise le client / police / usage déjà saisis dans la colonne client</span></div>
+<button class="valbtn" style="margin-top:2px;background:linear-gradient(135deg,#7c3aed,#5b21b6)" onclick="buildPieceReceiptManual()">🧾 <span data-ar>إنشاء وصل القبض</span><span data-fr>Générer la pièce</span></button>
+</div>
+</div>
+</div>
+</div>
+
+</div><!-- /calc-main-row -->
+</div>
+
+<!-- ═══════════ HIST PAGE ═══════════ -->
+<div class="page" id="page-hist">
+<div class="backup-banner" id="backup-banner">
+<span class="bb-txt">⚠️ <span data-ar>لم يتم التصدير منذ 7 أيام!</span><span data-fr>Pas de sauvegarde depuis 7j!</span></span>
+<button class="bb-btn" onclick="exportD()">📤</button>
+</div>
+<div class="h-toolbar">
+<button class="hfbtn" id="hf-all" onclick="setHFilter('all')"><span data-ar>الكل</span><span data-fr>Tout</span></button>
+<button class="hfbtn on" id="hf-today" onclick="setHFilter('today')"><span data-ar>اليوم</span><span data-fr>Auj.</span></button>
+<button class="hfbtn" id="hf-week" onclick="setHFilter('week')"><span data-ar>الأسبوع</span><span data-fr>Sem.</span></button>
+<button class="hfbtn" id="hf-month" onclick="setHFilter('month')"><span data-ar>الشهر</span><span data-fr>Mois</span></button>
+<input type="date" id="hf-date" onchange="setHDate(this.value)" title="اختر يوماً / Choisir un jour" style="padding:7px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.78rem;background:var(--panel);color:var(--text)">
+<input class="hsearch" type="text" id="h-search" placeholder="🔍 بحث / Recherche..." oninput="renderHist()">
+<select id="hf-agent" class="admin-only" onchange="renderHist()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.78rem;background:var(--panel);color:var(--text)">
+<option value="">👤 <span data-ar>كل الموظفين</span><span data-fr>Tous agents</span></option>
+</select>
+<select id="hf-ins" onchange="renderHist()" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:9px;font-family:inherit;font-size:.78rem;background:var(--panel);color:var(--text)">
+<option value="">🛡️ <span data-ar>كل الأنواع</span><span data-fr>Tous types</span></option>
+</select>
+<button class="hc-btn xl" onclick="exportXL()">📊 Excel</button>
+<button class="hc-btn csv" onclick="exportCSV()">📋 CSV</button>
+<button class="hc-btn rep" onclick="showDailyReport()">🖨️ <span data-ar>تقرير</span><span data-fr>Rapport</span></button>
+</div>
+<div class="h-summary" id="h-summary">
+<div class="hs-l" id="hs-label">—</div>
+<div class="hs-r">
+<div class="hs-item"><div class="hs-v" id="hs-n">0</div><span class="hs-k"><span data-ar>عملية</span><span data-fr>op.</span></span></div>
+<div class="hs-item"><div class="hs-v" style="color:var(--green)" id="hs-ref">0</div><span class="hs-k">DH <span data-ar>مُرجَع</span><span data-fr>remb.</span></span></div>
+<div class="hs-item"><div class="hs-v" style="color:var(--gold-d)" id="hs-col">0</div><span class="hs-k">DH <span data-ar>محصَّل</span><span data-fr>collect.</span></span></div>
+</div>
+</div>
+<div id="hist-body"></div>
+</div>
+
+<!-- ═══════════ CLIENTS PAGE ═══════════ -->
+<div class="page" id="page-clients">
+<div style="display:flex;gap:9px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
+<input type="text" id="cl-search" placeholder="🔍 بحث / Search..." oninput="renderClients()" style="flex:1;min-width:160px;padding:9px 14px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r3);font-family:inherit;font-size:.85rem;color:var(--text);outline:none;transition:.15s;box-shadow:var(--shadow)">
+<button onclick="showRenewals()" style="padding:9px 14px;background:var(--red-bg);border:1.5px solid rgba(220,38,38,.2);border-radius:var(--r3);color:var(--red);font-family:inherit;font-weight:700;font-size:.78rem;cursor:pointer;transition:.2s">🔔 <span data-ar>قريب الانتهاء</span><span data-fr>Expirent bientôt</span></button>
+</div>
+<div id="clients-body">
+<div style="text-align:center;padding:60px 20px;color:var(--text3);font-size:.86rem;line-height:2">
+<span data-ar>يُضاف الزبون تلقائياً عند تأكيد عملية<br>اضغط على اسم لملء الحقول</span>
+<span data-fr>Clients ajoutés automatiquement à chaque validation<br>Cliquez sur un nom pour remplir les champs</span>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ RENEWALS TRACKER PAGE ═══════════ -->
+<div class="page" id="page-renewals">
+<!-- v7: الأرقام فسطر واحد صغير، والاستيراد والإضافة كيتحلو بالضغط -->
+<div class="rt7-bar">
+<span class="rt7-c"><span data-ar>قيد الانتظار</span><span data-fr>En attente</span><b id="rt-stat-wait">0</b></span>
+<span class="rt7-c warn"><span data-ar>تنبيه (2-7 أيام)</span><span data-fr>Alerte (2-7j)</span><b id="rt-stat-warn">0</b></span>
+<span class="rt7-c urgent"><span data-ar>ملزم بالأداء (8+)</span><span data-fr>Paiement dû (8+)</span><b id="rt-stat-urgent">0</b></span>
+<span class="rt7-c tot"><span data-ar>المجموع</span><span data-fr>Total</span><b id="rt-stat-total-price">—</b></span>
+<span class="rt7-sp"></span>
+<button type="button" class="rt7-b" id="rt7-b-imp" onclick="rt7Toggle('rt7-imp')">&#x1F4E4; <span data-ar>استيراد البوردورو</span><span data-fr>Importer bordereau</span></button>
+<button type="button" class="rt7-b" id="rt7-b-add" onclick="rt7Toggle('rt7-add')">&#x2795; <span data-ar>إضافة يدوياً</span><span data-fr>Ajouter</span></button>
+<button type="button" class="rt7-b" id="rt7-b-xls" onclick="rtExportExcel()">&#x1F4E5; Excel</button>
+</div>
+<div class="crd rt7-col" id="rt7-imp">
+<div class="ch"><div class="chi go">📥</div><div><div class="ch-t"><span data-ar>استيراد البوردورو اليومي</span><span data-fr>Import du bordereau</span></div><div class="ch-s"><span data-ar>ملف Excel — أعمدة: CLIENT, POLICE, TELEPHONE, Nature Evenement, DATE_EMISSION</span><span data-fr>Fichier Excel — colonnes: CLIENT, POLICE, TELEPHONE, Nature Evenement, DATE_EMISSION</span></div></div></div>
+<div class="cb">
+<div id="rt-import-err" style="display:none;background:var(--red-bg);border:1px solid rgba(220,38,38,.2);color:var(--red);padding:9px 12px;border-radius:8px;font-size:.78rem;margin-bottom:10px"></div>
+<div id="rt-import-zone" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+<label id="rt-dropzone" style="display:inline-flex;align-items:center;gap:8px;padding:8px 16px;border-radius:8px;border:1px dashed var(--border);background:var(--bg3);cursor:pointer;font-size:.82rem;font-weight:700;transition:.15s" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+  <span style="font-size:1.2rem">&#128229;</span>
+  <span data-ar>استيراد Excel</span><span data-fr>Importer Excel</span>
+  <input type="file" id="rt-file-input" accept=".xls,.xlsx" style="display:none">
+</label>
+<span id="rt-imported-name" style="font-size:.75rem;color:var(--text3)"></span>
+</div>
+<div id="rt-import-pending" style="display:none"></div>
+</div>
+</div>
+
+<div class="crd rt7-col" id="rt7-add">
+<div class="ch"><div class="chi p">➕</div><div><div class="ch-t"><span data-ar>إضافة زبون يدوياً</span><span data-fr>Ajouter manuellement</span></div><div class="ch-s"><span data-ar>لحالات المكالمات الهاتفية بلا ملف Excel</span><span data-fr>Pour les appels téléphoniques sans fichier</span></div></div></div>
+<div class="cb">
+<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:flex-end">
+  <input type="text"   id="rt-f-name"       placeholder="اسم كامل *"      style="flex:2;min-width:120px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem">
+  <input type="text"   id="rt-f-phone"      placeholder="هاتف"         style="flex:1;min-width:100px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem">
+  <input type="text"   id="rt-f-police"     placeholder="بوليصة"      style="flex:2;min-width:110px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.82rem">
+  <input type="text"   id="rt-f-attest"     placeholder="شهادة"       style="flex:1;min-width:90px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.82rem">
+  <select id="rt-f-attest-type" style="flex:0 0 auto;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem">
+    <option value="def">نهائية</option>
+    <option value="prov">مؤقتة</option>
+  </select>
+  <input type="text"   id="rt-f-matricule"  placeholder="ماتريكول"    style="flex:1;min-width:90px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.82rem">
+  <input type="text"   id="rt-f-marque"     placeholder="ماركة"        style="flex:1;min-width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem">
+  <input type="number" id="rt-f-price"      placeholder="سعر DH"         style="flex:1;min-width:80px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.82rem" step="0.01" inputmode="decimal">
+  <select id="rt-f-type" style="flex:0 0 auto;padding:8px 6px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem">
+    <option value="renew">تجديد</option>
+    <option value="prorog">تمديد</option>
+    <option value="new">جديد</option>
+    <option value="cancel">إلغاء</option>
+  </select>
+  <label style="flex:1 1 170px;display:flex;flex-direction:column;gap:3px;font-size:.7rem;color:var(--text3)"><span data-ar>📅 تاريخ التجديد (فارغ = اليوم)</span><span data-fr>📅 Date du renouvellement (vide = aujourd'hui)</span><input type="date" id="rt-f-date" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.82rem"></label>
+  <button class="valbtn" onclick="addRenewalClient()" style="flex:1 1 100%;padding:10px 14px;margin:0">✅ <span data-ar>إضافة</span><span data-fr>Ajouter</span></button>
+</div>
+</div>
+</div>
+
+
+
+<input class="hsearch" type="text" id="rt-search" placeholder="🔍 بحث بالاسم، الهاتف، أو رقم البوليصة..." oninput="renderRenewalsPage()" style="width:100%;margin-bottom:14px;box-sizing:border-box">
+<div class="rt-filter-bar" id="rt-date-filter">
+  <label>&#128197; الفترة:</label>
+  <label>من <input type="date" id="rt-date-from" onchange="renderRenewalsPage()"></label>
+  <label>إلى <input type="date" id="rt-date-to" onchange="renderRenewalsPage()"></label>
+  <button onclick="document.getElementById('rt-date-from').value='';document.getElementById('rt-date-to').value='';renderRenewalsPage()">✕ إلغاء</button>
+</div>
+
+<div class="h-date-sep"><span data-ar>الزبائن قيد الانتظار</span><span data-fr>Clients en attente</span> (<span id="rt-wait-count">0</span>)</div>
+<div id="rt-waiting-list"></div>
+
+<div id="rt-done-wrap" style="display:none">
+<div class="h-date-sep"><span data-ar>أدّوا</span><span data-fr>Payés</span> (<span id="rt-done-count">0</span>)</div>
+<div id="rt-done-list"></div>
+</div>
+
+<div style="text-align:center;font-size:.7rem;color:var(--text3);padding:14px"><span data-ar>هاد اللائحة مشتركة مع كل الفريق فالوكالة — أي تعديل كيبان للجميع فالوقت الحقيقي.</span><span data-fr>Liste partagée avec toute l'équipe — mise à jour en temps réel.</span></div>
+</div>
+
+</div>
+
+<!-- ═══════════ STATS PAGE ═══════════ -->
+<div class="page" id="page-stats">
+<div class="st-grid">
+<div class="st-card"><div class="st-v" id="st-n">0</div><div class="st-l"><span data-ar>إجمالي العمليات</span><span data-fr>Total opérations</span></div></div>
+<div class="st-card"><div class="st-v" style="color:var(--gold-d)" id="st-c">0</div><div class="st-l">DH <span data-ar>محصَّل</span><span data-fr>collecté</span></div></div>
+<div class="st-card"><div class="st-v" style="color:var(--green)" id="st-r">0</div><div class="st-l">DH <span data-ar>مُرجَع</span><span data-fr>remboursé</span></div></div>
+<div class="st-card"><div class="st-v" style="color:var(--red)" id="st-d">0</div><div class="st-l">DH <span data-ar>مديون</span><span data-fr>dû</span></div></div>
+</div>
+<div class="crd" style="margin-bottom:14px">
+<div class="ch"><div class="chi p">💡</div><div><div class="ch-t"><span data-ar>تحليلات</span><span data-fr>Analyses</span></div></div></div>
+<div class="cb" id="st-insights"></div>
+</div>
+<div class="crd" style="margin-bottom:14px">
+<div class="ch"><div class="chi go">📈</div><div><div class="ch-t"><span data-ar>ترتيب الموظفين</span><span data-fr>Classement agents</span></div></div></div>
+<div class="cb" id="st-chart-body"></div>
+</div>
+<div id="stats-body"></div>
+</div>
+
+<!-- ═══════════ PRICES PAGE ═══════════ -->
+<div class="page" id="page-prices">
+<div style="max-width:700px">
+<div class="crd">
+<div class="ch"><div class="chi a">💰</div><div><div class="ch-t"><span data-ar>إعدادات الأسعار</span><span data-fr>Configuration prix</span></div><div class="ch-s"><span data-ar>للمسؤول فقط</span><span data-fr>Admin seulement</span></div></div></div>
+<div class="cb">
+<div class="psecl">🚗 <span data-ar>بنزين</span><span data-fr>Essence</span> — 1 an</div>
+<div class="pg4">
+<div><div class="plbl">≤6 CV</div><input type="number" class="pinp" id="pe1" value="2227.18" step="0.01" onchange="saveP('e1',this.value)"></div>
+<div><div class="plbl">7-8 CV</div><input type="number" class="pinp" id="pe2" value="2710.74" step="0.01" onchange="saveP('e2',this.value)"></div>
+<div><div class="plbl">9-10 CV</div><input type="number" class="pinp" id="pe3" value="2940.13" step="0.01" onchange="saveP('e3',this.value)"></div>
+<div><div class="plbl">11+ CV</div><input type="number" class="pinp" id="pe4" value="4224.38" step="0.01" onchange="saveP('e4',this.value)"></div>
+</div>
+<div class="psecl">🚗 <span data-ar>ديزل</span><span data-fr>Diesel</span> — 1 an</div>
+<div class="pg3">
+<div><div class="plbl">≤5 CV</div><input type="number" class="pinp" id="pd1" value="2710.74" step="0.01" onchange="saveP('d1',this.value)"></div>
+<div><div class="plbl">6-7 CV</div><input type="number" class="pinp" id="pd2" value="2940.00" step="0.01" onchange="saveP('d2',this.value)"></div>
+<div><div class="plbl">8+ CV</div><input type="number" class="pinp" id="pd3" value="4224.38" step="0.01" onchange="saveP('d3',this.value)"></div>
+</div>
+<div class="psecl">🏍️ Moto — 1 an</div>
+<div class="pg3">
+<div><div class="plbl">≤50 CC</div><input type="number" class="pinp" id="pm_le50" value="1473" step="1" onchange="saveP('m_le50',this.value)"></div>
+<div><div class="plbl">51—125 CC</div><input type="number" class="pinp" id="pm_mid" value="2000" step="1" onchange="saveP('m_mid',this.value)"></div>
+<div><div class="plbl">126+ CC</div><input type="number" class="pinp" id="pm_ge126" value="2683" step="1" onchange="saveP('m_ge126',this.value)"></div>
+</div>
+<div class="psecl">📅 <span data-ar>رسم التقسيط (لكل شطر إضافي)</span><span data-fr>Frais d'échelonnement</span></div>
+<input type="number" class="pinp" id="pinstfee" value="17" step="1" onchange="saveP('instfee',this.value)" style="max-width:120px">
+<div class="psecl">🚐 Commercial + 🚛 Camion</div>
+<div class="pg4">
+<div><div class="plbl">Comm.</div><input type="number" class="pinp" id="pcomm" value="5024" step="1" onchange="saveP('comm',this.value)"></div>
+<div><div class="plbl">−3.5T</div><input type="number" class="pinp" id="pt35" value="3950" step="1" onchange="saveP('t35',this.value)"></div>
+<div><div class="plbl">12T</div><input type="number" class="pinp" id="pt12" value="7000" step="1" onchange="saveP('t12',this.value)"></div>
+<div><div class="plbl">14T</div><input type="number" class="pinp" id="pt14" value="8000" step="1" onchange="saveP('t14',this.value)"></div>
+</div>
+<div class="psecl"><span data-ar>الطابع الجبائي</span><span data-fr>Timbre fiscal</span></div>
+<input type="number" class="pinp" id="ptimbre" value="17" step="1" onchange="saveP('timbre',this.value)" style="max-width:120px">
+
+<div class="psecl">🚛 TPV — <span data-ar>الأسعار الثابتة</span><span data-fr>Tarifs fixes</span></div>
+<div style="font-size:.66rem;color:var(--text3);margin-bottom:6px;font-weight:700">Camion</div>
+<div class="pg2">
+<div><div class="plbl">5j</div><input type="number" class="pinp" id="ptpv_camion_5j" value="400" step="1" onchange="saveP('tpv_camion_5j',this.value)"></div>
+<div><div class="plbl">10j</div><input type="number" class="pinp" id="ptpv_camion_10j" value="700" step="1" onchange="saveP('tpv_camion_10j',this.value)"></div>
+<div><div class="plbl">3 mois</div><input type="number" class="pinp" id="ptpv_camion_3m" value="0" step="1" onchange="saveP('tpv_camion_3m',this.value)"></div>
+<div><div class="plbl">6 mois</div><input type="number" class="pinp" id="ptpv_camion_6m" value="0" step="1" onchange="saveP('tpv_camion_6m',this.value)"></div>
+<div><div class="plbl">1 an</div><input type="number" class="pinp" id="ptpv_camion_1a" value="0" step="1" onchange="saveP('tpv_camion_1a',this.value)"></div>
+</div>
+<div style="font-size:.66rem;color:var(--text3);margin:8px 0 6px;font-weight:700">Camion avec remorque</div>
+<div class="pg2">
+<div><div class="plbl">5j</div><input type="number" class="pinp" id="ptpv_remorque_5j" value="500" step="1" onchange="saveP('tpv_remorque_5j',this.value)"></div>
+<div><div class="plbl">10j</div><input type="number" class="pinp" id="ptpv_remorque_10j" value="850" step="1" onchange="saveP('tpv_remorque_10j',this.value)"></div>
+<div><div class="plbl">3 mois</div><input type="number" class="pinp" id="ptpv_remorque_3m" value="0" step="1" onchange="saveP('tpv_remorque_3m',this.value)"></div>
+<div><div class="plbl">6 mois</div><input type="number" class="pinp" id="ptpv_remorque_6m" value="0" step="1" onchange="saveP('tpv_remorque_6m',this.value)"></div>
+<div><div class="plbl">1 an</div><input type="number" class="pinp" id="ptpv_remorque_1a" value="0" step="1" onchange="saveP('tpv_remorque_1a',this.value)"></div>
+</div>
+<div style="font-size:.66rem;color:var(--text3);margin:8px 0 6px;font-weight:700">Tourisme</div>
+<div class="pg4">
+<div><div class="plbl">5j</div><input type="number" class="pinp" id="ptpv_tourisme_5j" value="150" step="1" onchange="saveP('tpv_tourisme_5j',this.value)"></div>
+<div><div class="plbl">10j</div><input type="number" class="pinp" id="ptpv_tourisme_10j" value="250" step="1" onchange="saveP('tpv_tourisme_10j',this.value)"></div>
+<div><div class="plbl">1 mois</div><input type="number" class="pinp" id="ptpv_tourisme_1m" value="450" step="1" onchange="saveP('tpv_tourisme_1m',this.value)"></div>
+<div><div class="plbl">3 mois</div><input type="number" class="pinp" id="ptpv_tourisme_3m" value="1100" step="1" onchange="saveP('tpv_tourisme_3m',this.value)"></div>
+<div><div class="plbl">6 mois</div><input type="number" class="pinp" id="ptpv_tourisme_6m" value="0" step="1" onchange="saveP('tpv_tourisme_6m',this.value)"></div>
+<div><div class="plbl">1 an</div><input type="number" class="pinp" id="ptpv_tourisme_1a" value="0" step="1" onchange="saveP('tpv_tourisme_1a',this.value)"></div>
+</div>
+<div style="font-size:.66rem;color:var(--text3);margin:8px 0 6px;font-weight:700">Taxi — CNPAC (<span data-ar>يُضاف تلقائياً فوق Prime HT + Tax</span><span data-fr>ajouté auto au-dessus de Prime HT + Tax</span>)</div>
+<input type="number" class="pinp" id="pcnpac" value="17" step="1" onchange="saveP('cnpac',this.value)" style="max-width:120px">
+
+<div class="psecl">🚕 Taxi — <span data-ar>طريقة 2 (مبسّطة)</span><span data-fr>Méthode 2 (simplifiée)</span></div>
+<div class="pg2">
+<div><div class="plbl">Tax %</div><input type="number" class="pinp" id="ptaxi2_tax" value="15" step="0.1" onchange="saveP('taxi2_tax',this.value)"></div>
+<div><div class="plbl">Taxe Parafiscale %</div><input type="number" class="pinp" id="ptaxi2_para" value="1.5" step="0.1" onchange="saveP('taxi2_para',this.value)"></div>
+</div>
+
+<div class="psecl">🧩 Autre — <span data-ar>فئات ومدد قابلة للتعديل بالكامل</span><span data-fr>Catégories 100% personnalisables</span></div>
+<div id="autre-admin-list"></div>
+<button type="button" onclick="autreAddCat()" style="margin-top:6px;padding:9px 16px;background:var(--gold-bg);border:1px solid rgba(30,58,95,.25);border-radius:9px;color:var(--gold-d);font-weight:700;cursor:pointer;font-size:.82rem">➕ <span data-ar>إضافة فئة جديدة</span><span data-fr>Ajouter une catégorie</span></button>
+
+<div class="psecl">🏢 <span data-ar>معلومات الوكالة</span><span data-fr>Info agence</span></div>
+<input type="text" class="ci-inp" id="ci-name" placeholder="EUR-ASSURANCES SARL..." oninput="saveCI()">
+<input type="text" class="ci-inp" id="ci-phone" placeholder="Tél : 0539 39 00 42" oninput="saveCI()">
+<input type="text" class="ci-inp" id="ci-addr" placeholder="Adresse (pied de reçu)..." oninput="saveCI()">
+<div class="r2">
+<input type="text" class="ci-inp" id="ci-addr2" placeholder="Adresse complète (Pièce de recette)..." oninput="saveCI()">
+<input type="text" class="ci-inp" id="ci-city" placeholder="Ville (Fait à...) — Ex: KSAR SGHIR" oninput="saveCI()">
+</div>
+<div class="r2">
+<input type="text" class="ci-inp" id="ci-ice" placeholder="ICE..." oninput="saveCI()">
+<input type="text" class="ci-inp" id="ci-piecestart" placeholder="بداية عداد وصل القبض (مثال 59767)" onchange="saveCI()">
+</div>
+<button class="savebtn" onclick="saveAllP()">💾 <span data-ar>حفظ جميع الأسعار</span><span data-fr>Sauvegarder tout</span></button>
+<div class="save-ok-msg" id="save-ok">✅ <span data-ar>تم الحفظ بنجاح</span><span data-fr>Sauvegardé avec succès</span></div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ SYNC PAGE ═══════════ -->
+<div class="page" id="page-sync">
+<div style="max-width:680px">
+<div class="syncrow">
+<button class="syncb exp" onclick="exportD()">📤 <span data-ar>تصدير النسخة الاحتياطية</span><span data-fr>Exporter sauvegarde</span></button>
+<button class="syncb imp" onclick="document.getElementById('impf').click()">📥 <span data-ar>استيراد</span><span data-fr>Importer</span></button>
+<input type="file" id="impf" accept=".json" style="display:none" onchange="importD(this)">
+</div>
+<div class="infobox">
+<b>📱 <span data-ar>مزامنة بين الأجهزة:</span><span data-fr>Synchronisation multi-appareils:</span></b><br>
+<span data-ar>تصدير ← احفظ أو أرسل واتساب ← استيراد على الجهاز الآخر</span>
+<span data-fr>Exporter → Envoyer par WhatsApp → Importer sur l'autre appareil</span>
+</div>
+<div class="crd">
+<div class="ch"><div class="chi p">👥</div><div><div class="ch-t"><span data-ar>إدارة المستخدمين</span><span data-fr>Gestion utilisateurs</span></div></div></div>
+<div class="cb">
+<div id="adm-lock2">
+<div style="font-size:.78rem;color:var(--text3);margin-bottom:10px;text-align:center"><span data-ar>أدخل كلمة سر Admin للمتابعة</span><span data-fr>Entrez le mot de passe Admin</span></div>
+<input type="password" class="ainp" id="adm-pwd2" placeholder="..." onkeydown="if(event.key==='Enter')checkAdm2()">
+<button class="admlkbtn" onclick="checkAdm2()" style="margin-top:9px">🔑 <span data-ar>دخول</span><span data-fr>Accéder</span></button>
+</div>
+<div id="adm-panel2" style="display:none">
+<div id="users-list"></div>
+<div style="margin-top:14px;padding-top:14px;border-top:1px dashed var(--border)">
+<div class="avrow" id="avrow">
+<span class="avo sel" data-av="👨">👨</span><span class="avo" data-av="👩">👩</span>
+<span class="avo" data-av="🧑">🧑</span><span class="avo" data-av="👨‍💼">👨‍💼</span>
+<span class="avo" data-av="👩‍💼">👩‍💼</span><span class="avo" data-av="⭐">⭐</span>
+</div>
+<div class="ul-add">
+<input type="text" class="ul-inp" id="new-uname" placeholder="Nom du nouvel agent..." onkeydown="if(event.key==='Enter')addUser()">
+<button class="ul-addbtn" onclick="addUser()">➕ <span data-ar>إضافة</span><span data-fr>Ajouter</span></button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="crd" id="log-card" style="display:none">
+<div class="ch"><div class="chi g">📋</div><div><div class="ch-t"><span data-ar>سجل الدخول</span><span data-fr>Journal d'accès</span></div></div></div>
+<div class="cb" id="log-body" style="padding:10px 16px"></div>
+</div>
+</div>
+</div>
+
+<!-- ═══════════ CAISSE PAGE ═══════════ -->
+<div class="page" id="page-caisse">
+<div id="caisse-body"></div>
+</div>
+
+<!-- ═══════════ ARCHIVES PAGE ═══════════ -->
+<div class="page" id="page-archives">
+<div class="syncrow" style="margin-bottom:14px">
+<button class="syncb exp" onclick="exportArchivesCSV()">📤 <span data-ar>تصدير CSV</span><span data-fr>Exporter CSV</span></button>
+</div>
+<div id="archives-body"></div>
+</div>
+
+<!-- ═══════════ JOURNAL COMPTABLE PAGE ═══════════ -->
+<div class="page" id="page-journal">
+<div class="syncrow" style="margin-bottom:14px">
+<button class="syncb exp" onclick="exportJournalCSV()">📤 <span data-ar>تصدير CSV</span><span data-fr>Exporter CSV</span></button>
+</div>
+<div style="overflow-x:auto"><table class="journal-table" id="journal-table">
+<thead><tr>
+<th><span data-ar>التاريخ</span><span data-fr>Date</span></th>
+<th><span data-ar>الوصف</span><span data-fr>Description</span></th>
+<th><span data-ar>الإيراد</span><span data-fr>Revenu</span></th>
+<th><span data-ar>المصروف</span><span data-fr>Dépense</span></th>
+<th><span data-ar>الرصيد</span><span data-fr>Solde</span></th>
+</tr></thead>
+<tbody id="journal-body"></tbody>
+</table></div>
+</div>
+
+<!-- ═══════════ REPORTS PAGE ═══════════ -->
+<div class="page" id="page-reports">
+<div class="period-sw" id="rep-period-sw">
+<button class="period-btn on" data-rp="day" onclick="setRepPeriod('day')"><span data-ar>يومي</span><span data-fr>Jour</span></button>
+<button class="period-btn" data-rp="week" onclick="setRepPeriod('week')"><span data-ar>أسبوعي</span><span data-fr>Semaine</span></button>
+<button class="period-btn" data-rp="month" onclick="setRepPeriod('month')"><span data-ar>شهري</span><span data-fr>Mois</span></button>
+<button class="period-btn" data-rp="year" onclick="setRepPeriod('year')"><span data-ar>سنوي</span><span data-fr>Année</span></button>
+</div>
+<div id="reports-body"></div>
+</div>
+
+<!-- ═══════════ PDF TEMPLATES PAGE ═══════════ -->
+<div class="page" id="page-pdftpl">
+<div style="max-width:820px">
+<div class="crd" style="margin-bottom:14px">
+<div class="ch"><div class="chi a">🧷</div><div><div class="ch-t"><span data-ar>قوالب PDF</span><span data-fr>Modèles PDF</span></div><div class="ch-s"><span data-ar>ارفع نموذج بوليصة/شهادة فارغ ثم حدّد أماكن الاسم ورقم البوليصة ورقم الشهادة والمدة عليه</span><span data-fr>Importez un modèle vierge puis positionnez les champs client / police / attestation / durée</span></div></div></div>
+<div class="cb">
+<div style="display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:12px">
+<button class="ul-addbtn" onclick="document.getElementById('tpl-file').click()">📎 <span data-ar>رفع قالب PDF جديد</span><span data-fr>Importer un modèle</span></button>
+<input type="file" id="tpl-file" accept="application/pdf" style="display:none" onchange="onTplFileSelected(this)">
+</div>
+<div id="tpl-list"></div>
+</div>
+</div>
+
+<div class="crd" id="tpl-calib-card" style="display:none">
+<div class="ch"><div class="chi go">🎯</div><div><div class="ch-t"><span data-ar>تحديد أماكن الحقول</span><span data-fr>Positionner les champs</span></div><div class="ch-s" id="tpl-calib-name"></div></div></div>
+<div class="cb">
+<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+<span style="font-size:.78rem;color:var(--text3)"><span data-ar>الصفحة</span><span data-fr>Page</span>:</span>
+<input type="number" id="tpl-page-num" value="1" min="1" style="width:60px;padding:6px 8px;border:1px solid var(--border);border-radius:7px;font-family:inherit" onchange="renderTplCanvas()">
+<button type="button" class="hfbtn" onclick="setTplFieldMode('client')" id="tplfm-client">👤 <span data-ar>الاسم</span><span data-fr>Client</span></button>
+<button type="button" class="hfbtn" onclick="setTplFieldMode('police')" id="tplfm-police">🔢 <span data-ar>رقم البوليصة</span><span data-fr>N° Police</span></button>
+<button type="button" class="hfbtn" onclick="setTplFieldMode('attest')" id="tplfm-attest">📜 <span data-ar>رقم الشهادة</span><span data-fr>N° Attestation</span></button>
+<button type="button" class="hfbtn" onclick="setTplFieldMode('duration')" id="tplfm-duration">🗓️ <span data-ar>المدة</span><span data-fr>Durée</span></button>
+</div>
+<div style="font-size:.72rem;color:var(--text3);margin-bottom:8px"><span data-ar>اختر حقلاً من الأعلى ثم اضغط على مكانه المناسب فوق صورة القالب — يمكنك إعادة الضغط لتصحيح المكان</span><span data-fr>Choisissez un champ ci-dessus puis cliquez sur son emplacement dans l'image — recliquez pour corriger</span></div>
+<div style="overflow:auto;border:1px solid var(--border);border-radius:10px;max-height:70vh">
+<canvas id="tpl-canvas" style="cursor:crosshair;display:block"></canvas>
+</div>
+<button class="valbtn" style="margin-top:10px" onclick="document.getElementById('tpl-calib-card').style.display='none'">✅ <span data-ar>تم — إغلاق</span><span data-fr>Terminé</span></button>
+</div>
+</div>
+</div>
+</div>
+
+</div><!-- /content -->
+
+<!-- FOOTER -->
+<footer class="app-footer">
+<div class="ft-clock" id="ft-clock">--:--</div>
+<div class="ft-copy">© <span id="ft-year"></span> <span data-ar>جميع الحقوق محفوظة</span><span data-fr>Tous droits réservés</span> — بلال الهيشو</div>
+</footer>
+
+</div><!-- /pages-wrap -->
+</div><!-- /main-area -->
+</div><!-- /app-shell -->
+
+<!-- RECEIPT -->
+<div class="receipt" id="receipt">
+<button class="rcclose" onclick="document.getElementById('receipt').classList.remove('show')">✕ <span data-ar>إغلاق</span><span data-fr>Fermer</span></button>
+<div class="print-size-row">
+<button class="pszbtn a5" onclick="doPrint('a5')">📄 A5</button>
+<button class="pszbtn t80" onclick="doPrint('80mm')">🖨️ 80mm</button>
+<button class="pszbtn a4" onclick="doPrint('a4')">📃 A4</button>
+</div>
+<div class="share-row">
+<button class="share-btn wa" onclick="shareWA()">📱 WhatsApp</button>
+<button class="share-btn cp" onclick="copyRec()">📋 <span data-ar>نسخ</span><span data-fr>Copier</span></button>
+<button class="share-btn sms" onclick="shareNative()">🔗 Share</button>
+<button class="share-btn cp" onclick="downloadReceiptPDF()">⬇️ PDF</button>
+</div>
+<div class="rcwrap">
+<div style="text-align:center;margin-bottom:14px">
+<div style="font-size:1.1rem;font-weight:900;color:#212529">🛡️ <span id="r-ci-name">EUR assurance</span></div>
+<div style="font-size:.7rem;color:#888;font-family:'JetBrains Mono',monospace;margin-top:2px" id="r-num"></div>
+<div style="font-size:.78rem;font-weight:700;margin-top:2px;color:#555"><span data-ar>وصل إرجاع</span><span data-fr>Reçu de remboursement</span></div>
+</div>
+<div class="rcdiv"></div>
+<div class="rcr"><span class="l"><span data-ar>التاريخ</span><span data-fr>Date</span>:</span><span class="v" id="r-date"></span></div>
+<div class="rcr"><span class="l">Agent:</span><span class="v" id="r-user"></span></div>
+<div class="rcr"><span class="l"><span data-ar>الزبون</span><span data-fr>Client</span>:</span><span class="v" id="r-client"></span></div>
+<div class="rcr" id="r-pr" style="display:none"><span class="l">Immat.:</span><span class="v" id="r-plate" style="font-family:monospace"></span></div>
+<div class="rcr" id="r-polr" style="display:none"><span class="l">N° Police:</span><span class="v" id="r-police" style="font-family:monospace"></span></div>
+<div class="rcr"><span class="l"><span data-ar>التأمين</span><span data-fr>Assurance</span>:</span><span class="v" id="r-ins"></span></div>
+<div class="rcr" id="r-dr" style="display:none"><span class="l"><span data-ar>الفترة</span><span data-fr>Période</span>:</span><span class="v" id="r-dates"></span></div>
+<div class="rcdiv"></div>
+<div class="rcr"><span class="l"><span data-ar>المدفوع</span><span data-fr>Payé</span>:</span><span class="v" id="r-paid"></span></div>
+<div class="rcr"><span class="l"><span data-ar>الرسمي</span><span data-fr>Officiel</span>:</span><span class="v" id="r-off"></span></div>
+<div class="rcr"><span class="l"><span data-ar>طريقة الدفع</span><span data-fr>Mode</span>:</span><span class="v" id="r-paymode"></span></div>
+<div class="rcr" id="r-payref-row" style="display:none"><span class="l">Réf.:</span><span class="v" id="r-payref" style="font-family:monospace"></span></div>
+<div class="rcdiv"></div>
+<div class="rctbox"><div class="rctl" id="r-tl"></div><div class="rctv" id="r-tv"></div></div>
+<div class="rcsigns">
+<div class="rcsign"><div class="rcsline"><span data-ar>توقيع الوسيط</span><span data-fr>Signature agent</span></div></div>
+<div class="rcsign"><div class="rcsline"><span data-ar>توقيع الزبون</span><span data-fr>Signature client</span><br><span id="r-csign" style="font-size:.62rem;color:#aaa"></span></div></div>
+</div>
+<div class="rcdiv"></div>
+<div class="rc-footer" id="r-footer">EUR assurance</div>
+</div>
+</div>
+
+<!-- PIECE DE RECETTE (OFFICIAL DUPLICATE RECEIPT) -->
+<div class="receipt-piece" id="receipt-piece">
+<button class="rcclose" onclick="document.getElementById('receipt-piece').classList.remove('show')">✕ <span data-ar>إغلاق</span><span data-fr>Fermer</span></button>
+<div class="print-size-row">
+<button class="pszbtn a5" onclick="doPrintPiece('a5')">📄 A5</button>
+<button class="pszbtn t80" onclick="doPrintPiece('80mm')">🖨️ 80mm</button>
+<button class="pszbtn a4" onclick="doPrintPiece('a4')">📃 A4</button>
+<button class="pszbtn" style="background:var(--blue-bg);border-color:rgba(37,99,235,.35);color:var(--blue)" onclick="downloadPiecePDF()">⬇️ PDF</button>
+<button id="piece-usage-toggle-btn" class="pszbtn" onclick="togglePieceUsage()" title="إظهار Usage" style="font-size:.72rem">👁️ Usage</button>
+</div>
+<div class="piece-wrap" id="piece-wrap">
+<!-- two identical copies injected by JS: client copy + agency copy -->
+</div>
+</div>
+
+<!-- DAILY REPORT -->
+<div class="daily-report" id="daily-report">
+<button class="dr-close" onclick="document.getElementById('daily-report').classList.remove('show')">✕</button>
+<div id="dr-content" style="max-width:900px;margin:0 auto"></div>
+</div>
+
+<!-- PWA INSTALL BANNER -->
+<div id="pwa-banner">
+<div class="pwa-icon">🛡️</div>
+<div class="pwa-text">
+<div class="pwa-title">تثبيت التطبيق</div>
+<div class="pwa-sub">شغّل EUR assurance v102 بدون متصفح</div>
+</div>
+<div class="pwa-btns">
+<button class="pwa-install" id="pwa-install-btn">📲 تثبيت</button>
+<button class="pwa-dismiss" onclick="dismissPWA()">لاحقاً</button>
+</div>
+</div>
+
+<!-- كل قسم في ملف مستقل (الترتيب مهم) -->
+<script src="js/01-base.js"></script>
+<script src="js/02-caisse.js"></script>
+<script src="js/03-archives-journal-reports.js"></script>
+<script src="js/04-dashboard.js"></script>
+<script src="js/05-utils-prices-numbering.js"></script>
+<script src="js/06-installments.js"></script>
+<script src="js/07-login-lang-lock.js"></script>
+<script src="js/08-tarif-calc.js"></script>
+<script src="js/09-valider-receipts.js"></script>
+<script src="js/10-history.js"></script>
+<script src="js/11-stats-users.js"></script>
+<script src="js/12-clients-direct-export.js"></script>
+<script src="js/13-pdf-templates.js"></script>
+<script src="js/14-pdf-client-import.js"></script>
+<script src="js/14b-pdf-docs.js"></script>
+<script src="js/15-nav-pwa-init.js"></script>
+<script src="js/16-renewals-tracker.js"></script>
+<script src="js/17-unpaid.js"></script>
+<script src="js/18-phones.js"></script>
+<script src="js/19-rt-histlink.js"></script>
+<script src="js/20-v7-compact.js"></script>
+<script src="date-fix.js"></script>
+<script src="embed.js"></script>
+
+<!-- EDIT RENEWAL MODAL -->
+<div id="rt-edit-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;padding:12px">
+<div style="background:var(--panel);border-radius:16px;padding:16px 18px;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.3);max-height:92vh;overflow-y:auto">
+<div style="font-weight:800;font-size:.95rem;margin-bottom:13px">&#x270F;&#xFE0F; <span data-ar>&#x062A;&#x0639;&#x062F;&#x064A;&#x0644; &#x0645;&#x0639;&#x0644;&#x0648;&#x0645;&#x0627;&#x062A; &#x0627;&#x0644;&#x0632;&#x0628;&#x0648;&#x0646;</span><span data-fr>Modifier le client</span></div>
+<input type="hidden" id="rt-edit-id">
+<div class="fld" style="margin-bottom:9px"><label>&#x1F464; <span data-ar>&#x0627;&#x0644;&#x0627;&#x0633;&#x0645; *</span><span data-fr>Nom *</span></label><input type="text" id="rt-edit-name" style="width:100%;box-sizing:border-box"></div>
+<div class="r2" style="margin-bottom:9px">
+  <div class="fld"><label>&#x1F4CB; <span data-ar>&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0628;&#x0648;&#x0644;&#x064A;&#x0635;&#x0629;</span><span data-fr>Police</span></label><input type="text" id="rt-edit-police" style="font-family:monospace"></div>
+  <div class="fld"><label>&#x1F4DE; <span data-ar>&#x0627;&#x0644;&#x0647;&#x0627;&#x062A;&#x0641;</span><span data-fr>T&eacute;l</span></label><input type="text" id="rt-edit-phone"></div>
+</div>
+<div class="r2" style="margin-bottom:9px">
+  <div class="fld"><label>&#x1F3F7;&#xFE0F; <span data-ar>&#x0631;&#x0642;&#x0645; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0629;</span><span data-fr>N&deg; Attestation</span></label><input type="text" id="rt-edit-attest" style="font-family:monospace"></div>
+  <div class="fld"><label><span data-ar>&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x0634;&#x0647;&#x0627;&#x062F;&#x0629;</span><span data-fr>Type attest.</span></label>
+    <select id="rt-edit-attest-type" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r3);font-family:inherit;font-size:.85rem;color:var(--text)">
+      <option value="def">&#x1F7E2; &#x0646;&#x0647;&#x0627;&#x0626;&#x064A;&#x0629; / D&eacute;finitive</option>
+      <option value="prov">&#x1F7E1; &#x0645;&#x0624;&#x0642;&#x062A;&#x0629; / Provisoire</option>
+    </select></div>
+</div>
+<div class="r2" style="margin-bottom:9px">
+  <div class="fld"><label>&#x1F698; <span data-ar>&#x0627;&#x0644;&#x0645;&#x0627;&#x062A;&#x0631;&#x064A;&#x0643;&#x0648;&#x0644;</span><span data-fr>Matricule</span></label><input type="text" id="rt-edit-matricule" style="font-family:monospace"></div>
+  <div class="fld"><label>&#x1F3F7;&#xFE0F; <span data-ar>&#x0627;&#x0644;&#x0645;&#x0627;&#x0631;&#x0643;&#x0629;</span><span data-fr>Marque</span></label><input type="text" id="rt-edit-marque"></div>
+</div>
+<div class="r2" style="margin-bottom:12px">
+  <div class="fld"><label>&#x1F4B0; <span data-ar>&#x0627;&#x0644;&#x0633;&#x0639;&#x0631; (DH)</span><span data-fr>Prix (DH)</span></label><input type="number" id="rt-edit-price" step="0.01" inputmode="decimal" style="font-family:monospace"></div>
+  <div class="fld"><label><span data-ar>&#x0646;&#x0648;&#x0639; &#x0627;&#x0644;&#x0639;&#x0645;&#x0644;&#x064A;&#x0629;</span><span data-fr>Type op.</span></label>
+    <select id="rt-edit-type" style="width:100%;padding:8px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r3);font-family:inherit;font-size:.85rem;color:var(--text)">
+      <option value="renew">&#x062A;&#x062C;&#x062F;&#x064A;&#x062F;</option>
+      <option value="prorog">&#x062A;&#x0645;&#x062F;&#x064A;&#x062F;</option>
+      <option value="new">&#x062C;&#x062F;&#x064A;&#x062F;</option>
+    </select></div>
+</div>
+<div class="fld" style="margin-bottom:12px"><label>📅 <span data-ar>تاريخ التجديد (منه تُحسب الأيام)</span><span data-fr>Date du renouvellement (base du décompte)</span></label><input type="date" id="rt-edit-date" style="width:100%;box-sizing:border-box"></div>
+<div style="display:flex;gap:8px">
+  <button class="valbtn" style="flex:2" onclick="saveRenewalEdit()">&#x1F4BE; <span data-ar>&#x062D;&#x0641;&#x0638;</span><span data-fr>Sauvegarder</span></button>
+  <button class="printbtn" style="flex:1" onclick="closeRenewalEdit()">&#x2715; <span data-ar>&#x0625;&#x0644;&#x063A;&#x0627;&#x0621;</span><span data-fr>Annuler</span></button>
+</div>
+</div></div>
+
+<!-- HIST EDIT MODAL -->
+<div id="hist-edit-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+  <div style="background:var(--bg);border-radius:14px;padding:22px;max-width:520px;width:95%;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h3 style="margin:0;font-size:1rem;font-weight:800">✏️ <span data-ar>تعديل العملية</span><span data-fr>Modifier l'opération</span></h3>
+      <button onclick="document.getElementById('hist-edit-modal').style.display='none'" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text2)">×</button>
+    </div>
+    <input type="hidden" id="hem-idx">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">👤 <span data-ar>اسم الزبون</span><span data-fr>Client</span></label>
+        <input id="hem-client" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">📄 <span data-ar>رقم البوليصة</span><span data-fr>N° Police</span></label>
+        <input id="hem-police" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">🟢 <span data-ar>رقم الشهادة</span><span data-fr>N° Attestation</span></label>
+        <input id="hem-attest" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">🚘 <span data-ar>الماتريكول</span><span data-fr>Matricule</span></label>
+        <input id="hem-matricule" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">🏷️ <span data-ar>الماركة</span><span data-fr>Marque</span></label>
+        <input id="hem-marque" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">📞 <span data-ar>الهاتف</span><span data-fr>Téléphone</span></label>
+        <input id="hem-phone" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">💵 <span data-ar>المبلغ المدفوع</span><span data-fr>Montant payé</span></label>
+        <input id="hem-paid" type="number" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">🏷️ <span data-ar>السعر الرسمي</span><span data-fr>Prix officiel</span></label>
+        <input id="hem-off" type="number" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:monospace;font-size:.83rem;box-sizing:border-box">
+      </div>
+      <div style="grid-column:1/-1">
+        <label style="font-size:.72rem;font-weight:700;color:var(--text2);display:block;margin-bottom:4px">🔒 <span data-ar>نوع التأمين</span><span data-fr>Type assurance</span></label>
+        <input id="hem-type" type="text" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-size:.83rem;box-sizing:border-box">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:18px">
+      <button onclick="saveHistEdit()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--green);color:#fff;font-weight:800;cursor:pointer;font-size:.9rem">✅ <span data-ar>حفظ التعديلات</span><span data-fr>Enregistrer</span></button>
+      <button onclick="document.getElementById('hist-edit-modal').style.display='none'" style="padding:10px 20px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--text);cursor:pointer;font-size:.9rem">❌</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
